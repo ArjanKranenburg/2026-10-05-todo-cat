@@ -9,8 +9,9 @@
 
 ## Workflow
 
-- Change `lib/schema.ts`, run `npm run db:generate`, review the SQL it writes to `drizzle/`, then `npm run db:migrate`.
+- Change `lib/schema.ts`, run `npm run db:generate` (`-- --name <what>` names the folder), review the SQL it writes to `drizzle/`, then `npm run db:migrate`; run `npm run format` too, since drizzle-kit writes `snapshot.json` in a format Biome rejects.
 - `npm run db:reset` deletes the local database file and its journal files (`scripts/db-reset.mts`) and migrates a fresh one; it refuses non-`file:` URLs.
+- `npm run db:seed` (`scripts/db-seed.mts`) deletes and re-creates the demo user through Better Auth, then seeds its to-dos through the todo service; timestamps are anchored to today's local midnight, so runs on the same day write the same rows.
 - Do not use `drizzle-kit push`: every database (local, Vitest, e2e, CI) is built from the same reviewed migration files.
 
 ## Design decisions
@@ -33,3 +34,4 @@
 - libsql needs the `file:` prefix; relative paths resolve against the working directory, which is the repo root for every npm script.
 - In v1 the SQLite `drizzle()` config has no `schema` option; relational queries take `relations` (Relational Queries v2), so follow the v1 docs, not 0.x examples.
 - `@next/env` is CommonJS without detectable named exports, so Node-run `.mts` scripts need its default import.
+- A script that imports app modules (`lib/db.ts` and anything using it) runs with `tsx --conditions=react-server`: tsx resolves the extensionless imports plain Node rejects, and the condition makes `server-only` resolve to its empty module; load `.env` before the dynamic `import()` of `lib/db.ts`.
