@@ -20,6 +20,8 @@ Run from the repo root.
 - `npm install` installs the root app and both workspaces.
 - `npm run dev` starts the dev server on http://localhost:3000.
 - `npm run build` builds the app for production.
+- `npm test` runs Vitest unit and integration tests once.
+- `npm run test:e2e` runs Playwright end-to-end tests against its own dev server.
 - `npm run lint` runs `biome check` (lint, format and import order); it must pass before every commit.
 - `npm run format` rewrites files with the Biome formatter.
 
@@ -40,6 +42,7 @@ Run from the repo root.
 Index:
 
 - [workspaces.md](tech-docs/workspaces.md) — the npm workspace layout and why it exists before its content does.
+- [testing.md](tech-docs/testing.md) — Vitest and Playwright setup, test conventions and the e2e dev server's own output dir.
 
 ## Keeping this map current
 

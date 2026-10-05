@@ -12,9 +12,14 @@ node_modules/
 
 # testing
 coverage/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 
-# next.js
+# next.js (.next-e2e/ is the e2e dev server's output dir)
 /.next/
+/.next-e2e/
 /out/
 
 # build output (root and workspaces)
