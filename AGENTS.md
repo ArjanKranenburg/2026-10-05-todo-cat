@@ -11,7 +11,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # todo-cat
 
 A to-do list web app kept by Lissie, a cat with attitude (an AI agent, coming later).
-Next.js 16 App Router at the repo root, plus npm workspaces `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI), both still empty.
+Next.js 16 App Router at the repo root, plus npm workspaces `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI), each with only a placeholder function and its test so far.
 
 ## Commands
 

@@ -18,6 +18,7 @@
 - Vitest tests are colocated as `*.test.ts` / `*.test.tsx` anywhere in the repo, workspaces included; Playwright specs live in `e2e/` as `*.spec.ts`.
 - The file extension picks the Vitest environment (`projects` in `vitest.config.mts`): `.test.tsx` runs in jsdom, `.test.ts` runs in Node.
 - Import `test`/`expect` from `vitest` explicitly; Vitest globals are off.
+- Workspaces have no Vitest config or `test` script of their own; the root `npm test` runs every workspace's tests.
 
 ## Design decisions
 
