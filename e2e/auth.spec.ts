@@ -37,3 +37,38 @@ test("sign up, sign out and sign in again", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { name: "Hi, Lissie" })).toBeVisible();
 });
+
+test("Continue with Google goes to Google's consent screen", async ({
+  page,
+  baseURL,
+}) => {
+  // Google itself is out of reach; stop at its door and check what we sent.
+  await page.route("https://accounts.google.com/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: "Google consent stub" }),
+  );
+
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Continue with Google" }).click();
+
+  await expect(page.getByText("Google consent stub")).toBeVisible();
+  const url = new URL(page.url());
+  expect(url.origin + url.pathname).toBe(
+    "https://accounts.google.com/o/oauth2/v2/auth",
+  );
+  expect(url.searchParams.get("client_id")).toBe("e2e-google-client-id");
+  expect(url.searchParams.get("redirect_uri")).toBe(
+    `${baseURL}/api/auth/callback/google`,
+  );
+});
+
+test("a failed Google sign-in explains itself on the sign-in page", async ({
+  page,
+}) => {
+  await page.goto("/login?error=account_not_linked");
+
+  await expect(
+    page.getByText(
+      "That email already has an account. Sign in with your password.",
+    ),
+  ).toBeVisible();
+});

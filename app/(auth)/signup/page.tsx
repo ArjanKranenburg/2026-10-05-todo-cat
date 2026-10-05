@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth/auth-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { Shell } from "@/components/ui/shell";
+import { googleCredentials } from "@/lib/auth-options";
 import { getUserId } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Create account" };
@@ -17,7 +18,7 @@ export default async function SignUpPage() {
       <PageHeader title="Hand your to‑dos to Lissie">
         She keeps the list. She will also have opinions about it.
       </PageHeader>
-      <AuthForm mode="signUp" />
+      <AuthForm mode="signUp" google={googleCredentials() !== null} />
     </Shell>
   );
 }

@@ -6,13 +6,23 @@ import * as schema from "./schema";
 // The only client id the device flow accepts: the todo-cat CLI.
 export const CLI_CLIENT_ID = "todo-cat-cli";
 
+// Google sign-in is on only when both credentials are set, so a checkout without
+// them still runs; the sign-in pages hide the Google button in that case.
+export function googleCredentials() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  return clientId && clientSecret ? { clientId, clientSecret } : null;
+}
+
 // Better Auth options without a database handle, so the app (lib/auth.ts), the
 // test-only instance and the schema generator (scripts/auth-schema.ts) share them.
 // Secret and base URL come from BETTER_AUTH_SECRET and BETTER_AUTH_URL.
 export function authOptions(db: Parameters<typeof drizzleAdapter>[0]) {
+  const google = googleCredentials();
   return {
     database: drizzleAdapter(db, { provider: "sqlite", schema }),
     emailAndPassword: { enabled: true },
+    socialProviders: google ? { google } : {},
     plugins: [
       // The REST API and the CLI send `Authorization: Bearer <session token>`.
       bearer(),

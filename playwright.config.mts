@@ -44,6 +44,9 @@ export default defineConfig({
       DATABASE_URL: process.env.E2E_DATABASE_URL,
       // Better Auth checks request origins against its base URL.
       BETTER_AUTH_URL: baseURL,
+      // Dummy credentials turn Google sign-in on; tests stop at Google's consent URL.
+      GOOGLE_CLIENT_ID: "e2e-google-client-id",
+      GOOGLE_CLIENT_SECRET: "e2e-google-client-secret",
     },
   },
 });

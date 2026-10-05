@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 A to-do list web app kept by Lissie, a cat with attitude (an AI agent, coming later).
 Next.js 16 App Router at the repo root, plus npm workspaces `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI), each with only a placeholder function and its test so far.
-Persistence is Drizzle ORM on SQLite via `lib/db.ts`; authentication is Better Auth (email and password), and the only tables so far are its own.
+Persistence is Drizzle ORM on SQLite via `lib/db.ts`; authentication is Better Auth (email and password, optional Google), and the only tables so far are its own.
 
 ## Commands
 

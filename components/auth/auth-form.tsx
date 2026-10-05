@@ -1,7 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { type AuthFormState, signIn, signUp } from "@/app/auth-actions";
+import { useFormStatus } from "react-dom";
+import {
+  type AuthFormState,
+  signIn,
+  signInWithGoogle,
+  signUp,
+} from "@/app/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Form, FormError } from "@/components/ui/form";
 import { TextField } from "@/components/ui/text-field";
@@ -26,14 +32,20 @@ const modes = {
   },
 } as const;
 
-const initialState: AuthFormState = { error: null, email: "" };
+type AuthFormProps = {
+  mode: keyof typeof modes;
+  // Show "Continue with Google"; only when Google credentials are configured.
+  google: boolean;
+  // An error to show before the first submit, such as a failed Google sign-in.
+  error?: string | null;
+};
 
-export function AuthForm({ mode }: { mode: keyof typeof modes }) {
+export function AuthForm({ mode, google, error = null }: AuthFormProps) {
   const copy = modes[mode];
-  const [state, formAction, pending] = useActionState(
-    copy.action,
-    initialState,
-  );
+  const [state, formAction, pending] = useActionState(copy.action, {
+    error,
+    email: "",
+  } satisfies AuthFormState);
 
   return (
     <>
@@ -62,10 +74,24 @@ export function AuthForm({ mode }: { mode: keyof typeof modes }) {
           {pending ? copy.pending : copy.submit}
         </Button>
       </Form>
+      {google && (
+        <Form action={signInWithGoogle}>
+          <GoogleButton />
+        </Form>
+      )}
       <p className="text-muted">
         {copy.switchPrompt}{" "}
         <TextLink href={copy.switchHref}>{copy.switchLabel}</TextLink>
       </p>
     </>
+  );
+}
+
+function GoogleButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant="secondary" disabled={pending}>
+      {pending ? "Opening Google…" : "Continue with Google"}
+    </Button>
   );
 }

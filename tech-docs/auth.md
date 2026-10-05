@@ -2,9 +2,10 @@
 
 ## Approach
 
-- Better Auth with email and password only, on the Drizzle adapter over `lib/db.ts`; `better-auth`, `@better-auth/drizzle-adapter` and the `auth` CLI are pinned to the same exact version, since Better Auth releases them as one train.
+- Better Auth with email and password, plus Google sign-in when it is configured, on the Drizzle adapter over `lib/db.ts`; `better-auth`, `@better-auth/drizzle-adapter` and the `auth` CLI are pinned to the same exact version, since Better Auth releases them as one train.
 - `lib/auth-options.ts` holds the whole configuration as `authOptions(db)`; `lib/auth.ts` builds the app instance from it and adds `nextCookies()`, and `app/api/auth/[...all]/route.ts` mounts it at `/api/auth`.
 - `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` come from `.env`; Better Auth reads them itself.
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are optional; see Google sign-in below.
 - Plugins: `bearer()` lets the REST API and the CLI send `Authorization: Bearer <session token>`; `deviceAuthorization()` gives the CLI a `gh auth login` style login whose `/device/token` returns a Better Auth session token, which then goes out as that bearer token.
 - The device flow only accepts the client id `CLI_CLIENT_ID` (`todo-cat-cli`), and its approval page will live at `/device`; neither the page nor the CLI client exists yet.
 
@@ -21,6 +22,16 @@
 - `components/auth/auth-form.tsx` is the one form for both modes, built from `components/ui/`, which owns every shared class string; theme colors are tokens in `app/globals.css`.
 - Better Auth's error message (such as "Invalid email or password") is shown as is, and the typed email survives a failed attempt.
 
+## Google sign-in
+
+- `googleCredentials()` in `lib/auth-options.ts` turns the provider on only when both env vars are set, and the sign-in pages show "Continue with Google" only then, so a checkout without credentials has no broken button.
+- The Google OAuth client is of type "Web application" with the redirect URI `<BETTER_AUTH_URL>/api/auth/callback/google`; add one per environment.
+- `signInWithGoogle` in `app/auth-actions.ts` asks `auth.api.signInSocial` for Google's consent URL and redirects there; `nextCookies()` sets the OAuth state cookie. Better Auth's own callback route creates the user and session, so a Google user gets an ordinary session that `getUserId`, the bearer token and the device flow treat like any other.
+- No schema change: Google lands in the existing `account` table (`providerId` `google`).
+- Failed callbacks go to `/login?error=<code>`; the login page turns the code into a message.
+- Account linking stays at Better Auth's default: a Google sign-in links to an existing user with the same email only when that user's email is verified. Email sign-up does not verify emails yet, so a matching password account gets `account_not_linked` instead; this stops someone from signing up with another person's email first and sharing their Google account later. Revisit once email verification exists.
+- The `twoFactor` plugin, if added, gates only email, username and phone sign-in; Google sign-in would skip it.
+
 ## Schema
 
 - `npm run db:auth-schema` runs the Better Auth CLI to regenerate `lib/auth-schema.ts` from the config (core tables plus the plugins' tables, such as `device_code`) and formats it with Biome; `lib/schema.ts` re-exports it.
@@ -30,8 +41,9 @@
 ## Testing
 
 - `lib/auth.test.ts` builds a test-only instance from `authOptions(db)` plus `testUtils()` on a migrated temp database, and checks sign-up, sign-in and `getUserId` with a cookie, a bearer token and neither.
+- Its Google tests run the real sign-in and callback routes and stub only Google's token endpoint (`fetch`); the provider decodes the returned id token without checking its signature, so an unsigned token works.
 - `testUtils()` stays out of `lib/auth-options.ts`: it puts privileged helpers on the auth context.
-- `e2e/auth.spec.ts` walks the real sign-up, sign-out and sign-in flow in the browser.
+- `e2e/auth.spec.ts` walks the real sign-up, sign-out and sign-in flow in the browser. For Google it stops at the consent URL via `page.route`, since the callback's token exchange runs on the server where the browser cannot stub it; the Playwright web server sets dummy Google credentials so the button shows.
 
 ## Gotchas
 

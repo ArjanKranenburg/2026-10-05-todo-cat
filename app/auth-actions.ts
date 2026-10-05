@@ -51,6 +51,17 @@ export async function signIn(
   redirect("/");
 }
 
+export async function signInWithGoogle(): Promise<void> {
+  // Better Auth stores the OAuth state and returns Google's consent URL;
+  // its /api/auth/callback/google route finishes the sign-in and sets the session.
+  const { url } = await auth.api.signInSocial({
+    body: { provider: "google", callbackURL: "/", errorCallbackURL: "/login" },
+    headers: await headers(),
+  });
+  if (!url) throw new Error("Better Auth returned no Google sign-in URL");
+  redirect(url);
+}
+
 export async function signOut(): Promise<void> {
   await auth.api.signOut({ headers: await headers() });
   redirect("/login");
