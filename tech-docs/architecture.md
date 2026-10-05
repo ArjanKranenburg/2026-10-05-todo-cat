@@ -59,6 +59,8 @@ around it. Hexagonal (ports and adapters), without the ceremony.
   Vitest and tsx compile it themselves, and the CLI's bundler inlines it.
 - Server and clients import the same schemas. The CLI parses every response with
   them, so a server change that breaks the shape fails loudly in the client.
+- Clients outside this repository get the same schemas as an OpenAPI document
+  derived from them (`lib/openapi.ts`, `/api/openapi.json`); see [rest-api.md](rest-api.md).
 - Validation lives in the schemas, at the adapter boundary. The service trusts its
   typed input but always enforces ownership.
 
