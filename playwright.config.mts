@@ -33,7 +33,8 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `npx next dev --port ${process.env.E2E_PORT}`,
+    // Migrates the fresh e2e database first; DATABASE_URL comes from `env` below.
+    command: `npm run --silent db:migrate && npx next dev --port ${process.env.E2E_PORT}`,
     url: baseURL,
     reuseExistingServer: false,
     // Own output dir and database, so e2e runs next to `npm run dev`

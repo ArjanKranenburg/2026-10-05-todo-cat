@@ -41,7 +41,7 @@
 
 - The e2e dev server writes to `.next-e2e/` instead of `.next/` (`NEXT_DIST_DIR` in `next.config.ts`), because Next 16 locks `.next/dev` and a second `next dev` in the same directory exits even on another port.
 - `playwright.config.mts` picks a free port on every run, so e2e never collides with `npm run dev` or other local servers; it is `.mts` because picking the port needs top-level await.
-- The e2e server gets its own `DATABASE_URL`, a fresh file in the OS temp dir per run, so e2e never touches `data/app.db` or another checkout's database.
+- The e2e server gets its own `DATABASE_URL`, a fresh file in the OS temp dir per run that the web server command migrates before `next dev` starts, so e2e never touches `data/app.db` or another checkout's database.
 - `E2E_PORT`, `E2E_DIST_DIR` (default `.next-e2e`) and `E2E_DATABASE_URL` override port, output dir and database, e.g. for two e2e runs in the same checkout.
 - Path aliases come from Vite 8's built-in `resolve.tsconfigPaths`, not from the `vite-tsconfig-paths` plugin the Next.js guide suggests.
 

@@ -12,6 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 A to-do list web app kept by Lissie, a cat with attitude (an AI agent, coming later).
 Next.js 16 App Router at the repo root, plus npm workspaces `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI), each with only a placeholder function and its test so far.
+Persistence is Drizzle ORM on SQLite via `lib/db.ts`, with no domain tables yet.
 
 ## Commands
 
@@ -26,6 +27,9 @@ Run from the repo root.
 - `npm run typecheck` type-checks the app and both workspaces.
 - `npm run qa` runs every gate (Biome, typecheck, build, Vitest, Playwright) and prints only what failed; CI runs the same script.
 - `npm run format` rewrites files with the Biome formatter.
+- `npm run db:generate` writes a migration to `drizzle/` from changes in `lib/schema.ts`.
+- `npm run db:migrate` applies pending migrations to the database at `DATABASE_URL`.
+- `npm run db:reset` deletes the local database file and migrates a fresh one.
 
 ## Definition of done
 
@@ -35,7 +39,16 @@ Run from the repo root.
 ## Verify, don't recall
 
 - Next.js, React, Tailwind, TypeScript and Biome here are newer than your training data.
-- Check APIs against current docs (`node_modules/next/dist/docs/` for Next.js) before writing code, not against memory.
+- Check APIs against current docs before writing code, not against memory; see Researching docs for where.
+
+## Researching docs
+
+- Next.js: the version-matched guides in `node_modules/next/dist/docs/`.
+- Drizzle: start at https://orm.drizzle.team/llms.txt and follow its `docs/sqlite/...` links; the docs target the v1 RC installed here, and the pages are HTML, so fetch them and read the text.
+- Other vendors that publish an `llms.txt` (try `https://<docs-site>/llms.txt`): start there before searching.
+- Libraries with an installed skill in `.claude/skills/` (Mastra, CopilotKit; `impeccable` and `frontend-design` for UI design): load the skill, which points at current docs.
+- Any other library (React, Tailwind, Biome, Vitest, Playwright, zod, libsql, ...): the `ctx7` CLI from the `find-docs` skill (`npx ctx7@latest library <name> "<question>"`, then `docs <id> "<question>"`).
+- When docs and code disagree, the type declarations in `node_modules/<pkg>` are the truth for the installed version.
 
 ## Tech docs
 
@@ -50,6 +63,7 @@ Index:
 
 - [workspaces.md](tech-docs/workspaces.md) — the npm workspace layout and why it exists before its content does.
 - [testing.md](tech-docs/testing.md) — Vitest and Playwright setup, test conventions, the e2e server's isolation, the QA script and CI.
+- [database.md](tech-docs/database.md) — Drizzle on SQLite: the single `lib/db.ts` connection, the migration workflow, test databases and v1 gotchas.
 
 ## Keeping this map current
 
