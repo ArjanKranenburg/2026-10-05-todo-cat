@@ -1,10 +1,8 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
+import { CLI_CLIENT_ID } from "@todo-cat/contract";
 import type { BetterAuthOptions } from "better-auth";
 import { bearer, deviceAuthorization } from "better-auth/plugins";
 import * as schema from "./schema";
-
-// The only client id the device flow accepts: the todo-cat CLI.
-export const CLI_CLIENT_ID = "todo-cat-cli";
 
 // Better Auth options without a database handle, so the app (lib/auth.ts), the
 // test-only instance and the schema generator (scripts/auth-schema.ts) share them.

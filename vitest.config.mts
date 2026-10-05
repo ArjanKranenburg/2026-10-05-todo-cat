@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: [...configDefaults.exclude, "e2e/**", ".next/**", ".next-e2e/**"],
+    exclude: [...configDefaults.exclude, "e2e/**", ".next/**", ".next-e2e*/**"],
     setupFiles: ["./vitest.setup.ts"],
     projects: [
       {

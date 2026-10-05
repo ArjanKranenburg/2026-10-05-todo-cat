@@ -49,12 +49,14 @@ around it. Hexagonal (ports and adapters), without the ceremony.
 
 - The `contract/` workspace (`@todo-cat/contract`, `contract/src/todo.ts`) holds the
   zod schemas for todos, inputs, list filters, and the error body
-  `{ error: { code, message } }`.
+  `{ error: { code, message } }`, plus `describeIssues` (the `validation-failed`
+  message) and the CLI's device-flow client id and user-code format
+  (`contract/src/auth.ts`).
 - Each schema and its type share a name (`Todo`, `CreateTodoInput`, ...); input types
   are the parsed output (title trimmed, filter defaults applied), which is what the
   service takes.
 - The package exports its TypeScript source without a build step; Next.js (Turbopack),
-  Vitest and tsx compile it themselves.
+  Vitest and tsx compile it themselves, and the CLI's bundler inlines it.
 - Server and clients import the same schemas. The CLI parses every response with
   them, so a server change that breaks the shape fails loudly in the client.
 - Validation lives in the schemas, at the adapter boundary. The service trusts its
@@ -68,7 +70,7 @@ around it. Hexagonal (ports and adapters), without the ceremony.
 - **REST** (`/api/todos`): for non-browser clients. Bearer token or session cookie,
   401 `unauthorized` without either, 404 `todo-not-found`, 400 `validation-failed`;
   see [rest-api.md](rest-api.md).
-- **CLI** (`cli/`): a client of the REST API, never of the database.
+- **CLI** (`cli/`): a client of the REST API, never of the database; see [cli.md](cli.md).
 - **Agent tools** (later): call the service directly. The user id comes from the
   server session, never from a tool argument the model fills in.
 - **MCP**: over stdio inside the CLI (a REST client again), over HTTP inside the app

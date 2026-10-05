@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   CreateTodoInput,
+  describeIssues,
   ErrorBody,
   MAX_TITLE_LENGTH,
   Todo,
@@ -104,5 +105,25 @@ describe("response schemas", () => {
       ErrorBody.safeParse({ error: { code: "forbidden", message: "" } })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("describeIssues", () => {
+  test("prefixes each issue with its field path", () => {
+    const result = CreateTodoInput.safeParse({ title: " ", dueDate: "soon" });
+    if (result.success) throw new Error("expected a validation error");
+
+    expect(describeIssues(result.error)).toBe(
+      "title: A to-do needs a title. dueDate: Invalid ISO date",
+    );
+  });
+
+  test("leaves an issue without a path unprefixed", () => {
+    const result = UpdateTodoInput.safeParse({});
+    if (result.success) throw new Error("expected a validation error");
+
+    expect(describeIssues(result.error)).toBe(
+      "Nothing to update: give a title, a due date, or done.",
+    );
   });
 });

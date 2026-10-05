@@ -11,9 +11,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # todo-cat
 
 A to-do list web app kept by Lissie, a cat with attitude (an AI agent, coming later).
-Next.js 16 App Router at the repo root, plus npm workspaces `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI, only a placeholder function and its test so far).
+Next.js 16 App Router at the repo root, plus npm workspaces `contract/` (shared zod schemas) and `cli/` (the `todo-cat` CLI, a REST client for agents and humans).
 Persistence is Drizzle ORM on SQLite via `lib/db.ts`; authentication is Better Auth (email and password).
-The todo core exists (the `todos` table, `lib/todo-service.ts`, the zod schemas in `contract/`), and so does its REST adapter (`/api/todos`); the CLI and agent tools do not yet.
+The todo core exists (the `todos` table, `lib/todo-service.ts`, the zod schemas in `contract/`), and so do its REST adapter (`/api/todos`) and the CLI on top of it (login via the device flow and the `/device` approval page); agent tools and MCP do not yet.
 
 ## Commands
 
@@ -22,11 +22,12 @@ Run from the repo root.
 - `npm install` installs the root app and both workspaces.
 - `npm run dev` starts the dev server on http://localhost:3000.
 - `npm run build` builds the app for production.
+- `npx todo-cat --help` runs the CLI against `TODO_CAT_URL` (default http://localhost:3000); `npm run build -w todo-cat-cli` rebuilds it after changes in `cli/src/`.
 - `npm test` runs Vitest unit and integration tests once.
 - `npm run test:e2e` runs Playwright end-to-end tests against its own dev server.
 - `npm run lint` runs `biome check` (lint, format and import order); it must pass before every commit.
 - `npm run typecheck` type-checks the app and both workspaces.
-- `npm run qa` runs every gate (Biome, typecheck, build, Vitest, Playwright) and prints only what failed; CI runs the same script.
+- `npm run qa` runs every gate (Biome, typecheck, app and CLI builds, Vitest, Playwright) and prints only what failed; CI runs the same script.
 - `npm run format` rewrites files with the Biome formatter.
 - `npm run db:generate` writes a migration to `drizzle/` from changes in `lib/schema.ts`.
 - `npm run db:auth-schema` regenerates `lib/auth-schema.ts` from the Better Auth config; follow it with `db:generate`.
@@ -70,6 +71,7 @@ Index:
 - [database.md](tech-docs/database.md) — Drizzle on SQLite: the single `lib/db.ts` connection, the migration workflow, test databases and v1 gotchas.
 - [rest-api.md](tech-docs/rest-api.md) — the `/api/todos` endpoints, their schemas and status codes, and how to get a bearer token with curl.
 - [auth.md](tech-docs/auth.md) — Better Auth: config layout, the `getUserId` helper every adapter uses, server-action forms, schema generation and test setup.
+- [cli.md](tech-docs/cli.md) — the `todo-cat` CLI: commands, agent-friendly output and exit codes, device-flow login, credentials, the build and its end-to-end test.
 
 ## Keeping this map current
 

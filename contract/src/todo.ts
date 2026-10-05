@@ -80,3 +80,17 @@ export const ErrorBody = z.object({
   error: z.object({ code: ErrorCode, message: z.string() }),
 });
 export type ErrorBody = z.infer<typeof ErrorBody>;
+
+/**
+ * The message of a `validation-failed` error: one sentence per issue, prefixed
+ * with its field path (`title: A to-do needs a title.`).
+ */
+export function describeIssues(error: z.ZodError): string {
+  return error.issues
+    .map((issue) =>
+      issue.path.length > 0
+        ? `${issue.path.join(".")}: ${issue.message}`
+        : issue.message,
+    )
+    .join(" ");
+}

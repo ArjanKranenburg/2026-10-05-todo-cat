@@ -6,7 +6,7 @@
 - `lib/auth-options.ts` holds the whole configuration as `authOptions(db)`; `lib/auth.ts` builds the app instance from it and adds `nextCookies()`, and `app/api/auth/[...all]/route.ts` mounts it at `/api/auth`.
 - `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` come from `.env`; Better Auth reads them itself.
 - Plugins: `bearer()` lets the REST API and the CLI send `Authorization: Bearer <session token>`; `deviceAuthorization()` gives the CLI a `gh auth login` style login whose `/device/token` returns a Better Auth session token, which then goes out as that bearer token.
-- The device flow only accepts the client id `CLI_CLIENT_ID` (`todo-cat-cli`), and its approval page will live at `/device`; neither the page nor the CLI client exists yet.
+- The device flow only accepts the client id `CLI_CLIENT_ID` (`todo-cat-cli`, from the contract); its approval page is `/device` and its client is `todo-cat login` (see [cli.md](cli.md)).
 
 ## One way to ask who is signed in
 
@@ -20,6 +20,7 @@
 - They are server actions in `app/auth-actions.ts` that call `auth.api.*` with the request headers; `nextCookies()` makes those calls set and clear the session cookie, so no Better Auth React client is needed yet.
 - `components/auth/auth-form.tsx` is the one form for both modes, built from `components/ui/`, which owns every shared class string; theme colors are tokens in `app/globals.css`.
 - Better Auth's error message (such as "Invalid email or password") is shown as is, and the typed email survives a failed attempt.
+- `/login` and `/signup` take a `next` path (kept when switching between them) and return there after signing in; `returnTo` in `lib/return-to.ts` drops anything that is not a path on this site, so the forms cannot redirect elsewhere.
 
 ## Schema
 

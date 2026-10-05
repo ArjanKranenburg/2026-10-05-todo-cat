@@ -28,7 +28,14 @@ const modes = {
 
 const initialState: AuthFormState = { error: null, email: "" };
 
-export function AuthForm({ mode }: { mode: keyof typeof modes }) {
+export function AuthForm({
+  mode,
+  next,
+}: {
+  mode: keyof typeof modes;
+  /** Where to go after signing in; kept when switching between the modes. */
+  next: string;
+}) {
   const copy = modes[mode];
   const [state, formAction, pending] = useActionState(
     copy.action,
@@ -38,6 +45,7 @@ export function AuthForm({ mode }: { mode: keyof typeof modes }) {
   return (
     <>
       <Form action={formAction}>
+        <input type="hidden" name="next" value={next} />
         {mode === "signUp" && (
           <TextField label="Name" name="name" autoComplete="name" required />
         )}
@@ -64,7 +72,15 @@ export function AuthForm({ mode }: { mode: keyof typeof modes }) {
       </Form>
       <p className="text-muted">
         {copy.switchPrompt}{" "}
-        <TextLink href={copy.switchHref}>{copy.switchLabel}</TextLink>
+        <TextLink
+          href={
+            next === "/"
+              ? copy.switchHref
+              : `${copy.switchHref}?next=${encodeURIComponent(next)}`
+          }
+        >
+          {copy.switchLabel}
+        </TextLink>
       </p>
     </>
   );

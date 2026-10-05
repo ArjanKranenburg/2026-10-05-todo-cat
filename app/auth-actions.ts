@@ -4,6 +4,7 @@ import { isAPIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { returnTo } from "@/lib/return-to";
 
 export type AuthFormState = { error: string | null; email: string };
 
@@ -31,7 +32,7 @@ export async function signUp(
     if (isAPIError(error)) return { error: error.message, email };
     throw error;
   }
-  redirect("/");
+  redirect(returnTo(field(formData, "next")));
 }
 
 export async function signIn(
@@ -48,7 +49,7 @@ export async function signIn(
     if (isAPIError(error)) return { error: error.message, email };
     throw error;
   }
-  redirect("/");
+  redirect(returnTo(field(formData, "next")));
 }
 
 export async function signOut(): Promise<void> {

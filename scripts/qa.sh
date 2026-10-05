@@ -45,6 +45,7 @@ run() {
 run biome npm run --silent lint -- --colors=off
 run typecheck npm run --silent typecheck -- --pretty false
 run build npm run --silent build
+run cli-build npm run --silent build -w todo-cat-cli
 run vitest npm run --silent test
 run playwright npm run --silent test:e2e
 

@@ -1,5 +1,9 @@
 import "server-only";
-import type { ErrorBody, ErrorCode } from "@todo-cat/contract";
+import {
+  describeIssues,
+  type ErrorBody,
+  type ErrorCode,
+} from "@todo-cat/contract";
 import type { z } from "zod";
 import { getUserId } from "./session";
 import { TodoError } from "./todo-service";
@@ -60,12 +64,7 @@ export async function handle(
 function parse<S extends z.ZodType>(schema: S, data: unknown): z.output<S> {
   const result = schema.safeParse(data);
   if (result.success) return result.data;
-  const messages = result.error.issues.map((issue) =>
-    issue.path.length > 0
-      ? `${issue.path.join(".")}: ${issue.message}`
-      : issue.message,
-  );
-  throw new InvalidInput(messages.join(" "));
+  throw new InvalidInput(describeIssues(result.error));
 }
 
 /** The query string as a plain object; a repeated parameter keeps its last value. */

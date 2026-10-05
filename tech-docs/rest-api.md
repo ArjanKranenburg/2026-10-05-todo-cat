@@ -28,7 +28,7 @@ curl -s 'http://localhost:3000/api/todos?status=open' -H "authorization: Bearer 
 
 - The route files (`app/api/todos/route.ts`, `app/api/todos/[id]/route.ts`) only pick the schema and the service call; `lib/rest.ts` holds the shared steps: authenticate, parse, map errors.
 - Authentication comes first, so an anonymous request learns nothing about its input; invalid input is rejected before the service runs, so an empty patch to an unknown id is 400, not 404.
-- Validation messages are one sentence per zod issue, prefixed with the field path (`title: A to-do needs a title.`); clients switch on the code, never the message.
+- Validation messages are one sentence per zod issue, prefixed with the field path (`title: A to-do needs a title.`), built by the contract's `describeIssues`, which the CLI uses for its own input checks too; clients switch on the code, never the message.
 - A 401 carries `WWW-Authenticate: Bearer`; unexpected errors are not mapped and surface as Next.js 500s.
 - The browser session cookie is accepted too, because `getUserId` reads both.
 
