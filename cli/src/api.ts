@@ -54,7 +54,14 @@ export class TodoApi {
   }
 
   async delete(id: string): Promise<void> {
-    await this.send("DELETE", todoPath(id));
+    const path = todoPath(id);
+    const { response } = await this.send("DELETE", path);
+    if (response.status !== 204) {
+      throw new CliError(
+        "unexpected-response",
+        `DELETE ${path} answered ${response.status} ${response.statusText} instead of 204.`,
+      );
+    }
   }
 
   private async request<S extends z.ZodType>(
@@ -63,7 +70,8 @@ export class TodoApi {
     schema: S,
     body?: unknown,
   ): Promise<z.output<S>> {
-    const result = schema.safeParse(await this.send(method, path, body));
+    const { data } = await this.send(method, path, body);
+    const result = schema.safeParse(data);
     if (!result.success) {
       throw new CliError(
         "unexpected-response",
@@ -73,12 +81,12 @@ export class TodoApi {
     return result.data;
   }
 
-  /** Sends one request and returns its JSON body; maps error responses to CliError. */
+  /** Sends one request and returns its response and JSON body; maps error responses to CliError. */
   private async send(
     method: string,
     path: string,
     body?: unknown,
-  ): Promise<unknown> {
+  ): Promise<{ response: Response; data: unknown }> {
     const headers = new Headers({
       accept: "application/json",
       authorization: `Bearer ${this.token}`,
@@ -97,7 +105,7 @@ export class TodoApi {
     }
     const data: unknown = await response.json().catch(() => undefined);
     if (!response.ok) throw this.errorFor(response, data);
-    return data;
+    return { response, data };
   }
 
   private errorFor(response: Response, data: unknown): CliError {

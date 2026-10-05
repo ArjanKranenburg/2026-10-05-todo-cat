@@ -16,8 +16,8 @@ Schemas are from `@todo-cat/contract`; every error body is `ErrorBody`, and ever
 
 - `GET /api/openapi.json` serves an OpenAPI 3.1 document without a token, for clients outside this repository (other languages, generators, agents); `openapi.json` at the repo root is its committed copy.
 - `lib/openapi.ts` builds it from the contract schemas with zod-openapi; `.meta({ id })` in `contract/src/todo.ts` names a component, and an operation there needs adding with every new route.
-- The CLI does not use it: it imports the contract, which keeps the normalization, refinements and strictness that JSON Schema cannot carry. A generated client was tried and rejected for that reason.
-- The document may accept input the server rejects (a blank title), never the reverse: limits that apply after normalization stay out of it (`override` in the contract), and `lib/openapi.test.ts` checks this against the server schemas.
+- The CLI does not use it: it imports the contract, whose transforms (such as title trimming) JSON Schema cannot carry.
+- The document may accept input the server rejects (a blank title), never the reverse, because limits that apply after normalization stay out of it (`override` in the contract); `lib/openapi.test.ts` checks this with a JSON Schema 2020-12 validator against the server schemas.
 - After changing a schema or `lib/openapi.ts`, run `npm run openapi:generate`; `lib/openapi.test.ts` fails until `openapi.json` matches. A version bump in `package.json` needs it too, since `info.version` comes from there.
 
 ## Getting a bearer token with curl

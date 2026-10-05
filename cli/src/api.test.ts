@@ -11,15 +11,36 @@ afterEach(() => {
 
 const api = new TodoApi("http://todo-cat.test", "token");
 
+const html = () => new Response("<html>proxy</html>", { status: 200 });
+const empty = (status: number) => () => new Response(null, { status });
+const otherJson = () => Response.json({ todos: [] });
+
 test.each([
-  ["an HTML page", new Response("<html>proxy</html>", { status: 200 })],
-  ["no body", new Response(null, { status: 204 })],
-  ["JSON in another shape", Response.json({ todos: [] })],
-])("a success with %s is an unexpected response", async (_, response) => {
-  vi.stubGlobal("fetch", async () => response);
+  ["list", "an HTML page", () => api.list({ status: "all" }), html],
+  ["list", "no body", () => api.list({ status: "all" }), empty(204)],
+  [
+    "list",
+    "JSON in another shape",
+    () => api.list({ status: "all" }),
+    otherJson,
+  ],
+  ["delete", "an HTML page", () => api.delete("some-id"), html],
+  ["delete", "an empty 200", () => api.delete("some-id"), empty(200)],
+  ["delete", "JSON", () => api.delete("some-id"), otherJson],
+])(
+  "%s answered with %s is an unexpected response",
+  async (_, __, call, answer) => {
+    vi.stubGlobal("fetch", async () => answer());
 
-  const failure = await api.list({ status: "all" }).catch((error) => error);
+    const failure = await call().catch((error) => error);
 
-  expect(failure).toBeInstanceOf(CliError);
-  expect(failure.code).toBe("unexpected-response");
+    expect(failure).toBeInstanceOf(CliError);
+    expect(failure.code).toBe("unexpected-response");
+  },
+);
+
+test("delete answered with 204 succeeds", async () => {
+  vi.stubGlobal("fetch", async () => empty(204)());
+
+  await expect(api.delete("some-id")).resolves.toBeUndefined();
 });
