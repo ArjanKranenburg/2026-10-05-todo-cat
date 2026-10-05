@@ -4,7 +4,7 @@
 
 - SQLite through `@libsql/client` and Drizzle ORM; `DATABASE_URL` (a `file:` URL, `file:./data/app.db` locally) names the database.
 - `lib/db.ts` is the only module that opens the database; it imports `server-only`, so a Client Component importing it fails the build.
-- `lib/schema.ts` holds every table and is what drizzle-kit diffs; it has no tables yet (todos come with the architecture, auth tables with authentication).
+- `lib/schema.ts` defines or re-exports every table and is what drizzle-kit diffs; Better Auth's tables are generated into `lib/auth-schema.ts` (see [auth.md](auth.md)).
 - `drizzle.config.ts` drives drizzle-kit; generated migrations land in `drizzle/` and are committed.
 
 ## Workflow
@@ -31,6 +31,5 @@
 
 - `lib/db.ts` reads `DATABASE_URL` when first imported, so tests must stub it before a dynamic `import()`.
 - libsql needs the `file:` prefix; relative paths resolve against the working directory, which is the repo root for every npm script.
-- With no tables, `db:generate` reports "nothing to migrate" and `drizzle/` does not exist yet; `db:migrate` still succeeds and creates only the `__drizzle_migrations` log table.
 - In v1 the SQLite `drizzle()` config has no `schema` option; relational queries take `relations` (Relational Queries v2), so follow the v1 docs, not 0.x examples.
 - `@next/env` is CommonJS without detectable named exports, so Node-run `.mts` scripts need its default import.

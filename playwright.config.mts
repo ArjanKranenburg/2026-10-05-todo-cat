@@ -42,6 +42,8 @@ export default defineConfig({
     env: {
       NEXT_DIST_DIR: process.env.E2E_DIST_DIR,
       DATABASE_URL: process.env.E2E_DATABASE_URL,
+      // Better Auth checks request origins against its base URL.
+      BETTER_AUTH_URL: baseURL,
     },
   },
 });

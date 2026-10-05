@@ -1,3 +1,3 @@
-// Drizzle schema: every table lives here, and drizzle-kit diffs it to generate migrations.
-// No domain tables yet; todos and auth tables arrive with their features.
-export {};
+// Drizzle schema: every table is defined or re-exported here, and drizzle-kit diffs it to generate migrations.
+// Better Auth's tables are generated into auth-schema.ts (`npm run db:auth-schema`); do not edit that file by hand.
+export * from "./auth-schema";

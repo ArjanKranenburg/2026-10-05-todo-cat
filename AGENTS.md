@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 A to-do list web app kept by Lissie, a cat with attitude (an AI agent, coming later).
 Next.js 16 App Router at the repo root, plus npm workspaces `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI), each with only a placeholder function and its test so far.
-Persistence is Drizzle ORM on SQLite via `lib/db.ts`, with no domain tables yet.
+Persistence is Drizzle ORM on SQLite via `lib/db.ts`; authentication is Better Auth (email and password), and the only tables so far are its own.
 
 ## Commands
 
@@ -28,6 +28,7 @@ Run from the repo root.
 - `npm run qa` runs every gate (Biome, typecheck, build, Vitest, Playwright) and prints only what failed; CI runs the same script.
 - `npm run format` rewrites files with the Biome formatter.
 - `npm run db:generate` writes a migration to `drizzle/` from changes in `lib/schema.ts`.
+- `npm run db:auth-schema` regenerates `lib/auth-schema.ts` from the Better Auth config; follow it with `db:generate`.
 - `npm run db:migrate` applies pending migrations to the database at `DATABASE_URL`.
 - `npm run db:reset` deletes the local database file and migrates a fresh one.
 
@@ -64,6 +65,7 @@ Index:
 - [workspaces.md](tech-docs/workspaces.md) — the npm workspace layout and why it exists before its content does.
 - [testing.md](tech-docs/testing.md) — Vitest and Playwright setup, test conventions, the e2e server's isolation, the QA script and CI.
 - [database.md](tech-docs/database.md) — Drizzle on SQLite: the single `lib/db.ts` connection, the migration workflow, test databases and v1 gotchas.
+- [auth.md](tech-docs/auth.md) — Better Auth: config layout, the `getUserId` helper every adapter uses, server-action forms, schema generation and test setup.
 
 ## Keeping this map current
 
