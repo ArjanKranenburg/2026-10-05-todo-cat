@@ -8,9 +8,11 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "qa": "bash scripts/qa.sh"
   },
   "dependencies": {
     "next": "16.3.8",

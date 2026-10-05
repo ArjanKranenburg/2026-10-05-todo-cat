@@ -17,9 +17,9 @@ coverage/
 /blob-report/
 /playwright/.cache/
 
-# next.js (.next-e2e/ is the e2e dev server's output dir)
+# next.js (.next-e2e*/ are e2e dev server output dirs)
 /.next/
-/.next-e2e/
+/.next-e2e*/
 /out/
 
 # build output (root and workspaces)

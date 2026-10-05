@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Every key in .env.example whose name marks it as a secret gets a fresh
+      # random dummy value; real secrets never reach CI.
+      - name: Write .env with dummy secrets
+        run: |
+          while IFS= read -r line; do
+            case "$line" in
+              \#*) echo "$line" ;;
+              *SECRET=* | *KEY=* | *TOKEN=* | *PASSWORD=*)
+                echo "${line%%=*}=dummy-$(openssl rand -hex 24)" ;;
+              *) echo "$line" ;;
+            esac
+          done < .env.example > .env
+
+      - name: Read Playwright version
+        id: playwright
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install Playwright browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - run: npm run qa
+
+      - name: Upload QA log and Playwright results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: qa-results
+          path: |
+            qa.log
+            test-results/
+          if-no-files-found: ignore

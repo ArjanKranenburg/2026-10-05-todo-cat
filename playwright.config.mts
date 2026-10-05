@@ -1,4 +1,6 @@
 import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 function findFreePort(): Promise<number> {
@@ -13,8 +15,10 @@ function findFreePort(): Promise<number> {
 }
 
 // Playwright evaluates this file in the runner and again in every worker;
-// workers inherit the env var, so all of them agree on the first pick.
+// workers inherit the env vars, so all of them agree on the first pick.
 process.env.E2E_PORT ??= String(await findFreePort());
+process.env.E2E_DIST_DIR ??= ".next-e2e";
+process.env.E2E_DATABASE_URL ??= `file:${join(tmpdir(), `todo-cat-e2e-${process.pid}-${Date.now()}.db`)}`;
 const baseURL = `http://localhost:${process.env.E2E_PORT}`;
 
 export default defineConfig({
@@ -32,8 +36,11 @@ export default defineConfig({
     command: `npx next dev --port ${process.env.E2E_PORT}`,
     url: baseURL,
     reuseExistingServer: false,
-    // A separate output dir sidesteps the `next dev` lock on `.next/dev`,
-    // so e2e runs next to `npm run dev`.
-    env: { NEXT_DIST_DIR: ".next-e2e" },
+    // Own output dir and database, so e2e runs next to `npm run dev`
+    // and next to e2e runs of other checkouts.
+    env: {
+      NEXT_DIST_DIR: process.env.E2E_DIST_DIR,
+      DATABASE_URL: process.env.E2E_DATABASE_URL,
+    },
   },
 });
