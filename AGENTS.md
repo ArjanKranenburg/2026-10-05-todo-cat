@@ -13,7 +13,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 A to-do list web app kept by Lissie, a cat with attitude (an AI agent, coming later).
 Next.js 16 App Router at the repo root, plus npm workspaces `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI, only a placeholder function and its test so far).
 Persistence is Drizzle ORM on SQLite via `lib/db.ts`; authentication is Better Auth (email and password).
-The todo core exists (the `todos` table, `lib/todo-service.ts`, the zod schemas in `contract/`); its adapters (REST, CLI, agent tools) do not yet.
+The todo core exists (the `todos` table, `lib/todo-service.ts`, the zod schemas in `contract/`), and so does its REST adapter (`/api/todos`); the CLI and agent tools do not yet.
 
 ## Commands
 
@@ -68,6 +68,7 @@ Index:
 - [workspaces.md](tech-docs/workspaces.md) — the npm workspace layout and why it exists before its content does.
 - [testing.md](tech-docs/testing.md) — Vitest and Playwright setup, test conventions, the e2e server's isolation, the QA script and CI.
 - [database.md](tech-docs/database.md) — Drizzle on SQLite: the single `lib/db.ts` connection, the migration workflow, test databases and v1 gotchas.
+- [rest-api.md](tech-docs/rest-api.md) — the `/api/todos` endpoints, their schemas and status codes, and how to get a bearer token with curl.
 - [auth.md](tech-docs/auth.md) — Better Auth: config layout, the `getUserId` helper every adapter uses, server-action forms, schema generation and test setup.
 
 ## Keeping this map current

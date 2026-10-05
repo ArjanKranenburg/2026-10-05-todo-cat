@@ -31,6 +31,10 @@ export const Todo = z.object({
 });
 export type Todo = z.infer<typeof Todo>;
 
+/** A list of to-dos, in the order the service returns them. */
+export const TodoList = z.array(Todo);
+export type TodoList = z.infer<typeof TodoList>;
+
 export const CreateTodoInput = z.strictObject({
   title: TodoTitle,
   dueDate: DueDate.nullish(),
