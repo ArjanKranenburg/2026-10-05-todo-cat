@@ -28,7 +28,7 @@
 - It writes `.env` from `.env.example`, replacing every value whose key contains `SECRET`, `KEY`, `TOKEN` or `PASSWORD` with a random dummy, so a new secret in `.env.example` needs no workflow change and real secrets never reach CI.
 - Playwright browsers are cached per Playwright version; on a cache hit only the system dependencies are installed.
 - On failure the run uploads `qa.log` and `test-results/` as the `qa-results` artifact.
-- Watch a run with `gh run watch`; read a failed one with `gh run view --log-failed`.
+- After a push, `npm run ci:watch` (`scripts/ci-watch.sh`) waits for the run of HEAD and prints PASS or FAIL with the failed log; a bare `gh run watch` right after pushing finds no run yet.
 
 ## Conventions
 
@@ -49,7 +49,7 @@
 
 - `tsconfig.json` lists the `.next-e2e/` and `.next-e2e-cli/` type globs on purpose; without them Next rewrites `tsconfig.json` on every e2e run.
 - The CLI's end-to-end test (`cli/src/todo-cat.test.ts`, see [cli.md](cli.md)) starts its own `next dev` in `.next-e2e-cli/`, so it is the slowest Vitest file, and it needs no running server.
-- That test parses the CLI's `--json` stderr, so it fails when a shell exports `FORCE_COLOR` (some agent harnesses do): Node then warns on stderr that `NO_COLOR` is ignored; run `env -u FORCE_COLOR npm run qa`.
+- Some agent shells export `FORCE_COLOR`, and next to `NO_COLOR` it makes Node warn on stderr; `qa.sh` unsets it, and the CLI test drops it for the CLI, whose `--json` stderr it parses.
 - Vitest skips `.claude/` and `.agents/` (a symlink to it), because agent worktrees there are full checkouts whose tests are not this checkout's.
 - After an e2e run, the gitignored `next-env.d.ts` points at `.next-e2e/` types until the next `npm run dev` or `npm run build` points it back; this is harmless.
 - The config is evaluated by the runner and by every worker, so the port, dist dir and database travel through their `E2E_*` env vars.

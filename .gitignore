@@ -37,6 +37,13 @@ dist/
 # Mastra build/dev output
 .mastra/
 
+# background dev server state (scripts/dev-server.sh)
+/.dev-server/
+
+# throwaway files for the human, never committed (public/playground/ is served by the dev server)
+/playground/
+/public/playground/
+
 # misc
 .DS_Store
 *.pem

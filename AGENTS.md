@@ -20,7 +20,7 @@ The todo core exists (the `todos` table, `lib/todo-service.ts`, the zod schemas 
 Run from the repo root.
 
 - `npm install` installs the root app and both workspaces.
-- `npm run dev` starts the dev server on http://localhost:3000.
+- `npm run dev` starts the dev server on http://localhost:3000 in the foreground; agents use `npm run dev:start` instead (see Dev server).
 - `npm run build` builds the app for production.
 - `npx todo-cat --help` runs the CLI against `TODO_CAT_URL` (default http://localhost:3000); `npm run build -w todo-cat-cli` rebuilds it after changes in `cli/src/`.
 - `npm test` runs Vitest unit and integration tests once.
@@ -28,6 +28,7 @@ Run from the repo root.
 - `npm run lint` runs `biome check` (lint, format and import order); it must pass before every commit.
 - `npm run typecheck` type-checks the app and both workspaces.
 - `npm run qa` runs every gate (Biome, typecheck, app and CLI builds, Vitest, Playwright) and prints only what failed; CI runs the same script.
+- `npm run ci:watch` waits for the CI run of the pushed HEAD and watches it to the end; use it after every push instead of a bare `gh run watch`.
 - `npm run format` rewrites files with the Biome formatter.
 - `npm run db:generate` writes a migration to `drizzle/` from changes in `lib/schema.ts`.
 - `npm run db:auth-schema` regenerates `lib/auth-schema.ts` from the Better Auth config; follow it with `db:generate`.
@@ -39,6 +40,18 @@ Run from the repo root.
 
 - Run `npm run qa` before you call a task done; it must end with `QA: PASS`.
 - Fix the code instead of suppressing findings: no `biome-ignore`, `@ts-expect-error`, `@ts-ignore`, skipped tests or loosened config to get green.
+
+## Dev server
+
+- Check with `npm run dev:status`; if a server already answers on :3000, use it, whoever started it.
+- Start one with `npm run dev:start` (detached, survives your shell) and tell the human it is running; stop only that one, with `npm run dev:stop`.
+- Never `pkill`/`kill` a Next.js process: it may be the human's, and `pkill -f next` also matches your own shell.
+- Keep it on :3000, because Better Auth only accepts requests from `BETTER_AUTH_URL` (`http://localhost:3000`); elsewhere sign-in answers 403.
+- Next 16 allows one `next dev` per checkout (a second exits even on another port), so tests run their own servers in separate dist dirs (see testing.md).
+
+## Throwaway files
+
+- Scripts, pages and notes made only for the human to try something go in the gitignored `playground/`, or `public/playground/` for pages the dev server must serve; never commit them.
 
 ## Verify, don't recall
 

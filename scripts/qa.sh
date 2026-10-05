@@ -9,6 +9,8 @@ cd "$(dirname "$0")/.."
 
 LOG="${QA_LOG:-qa.log}"
 export NO_COLOR=1 NEXT_TELEMETRY_DISABLED=1
+# Some agent shells export FORCE_COLOR; next to NO_COLOR it makes Node warn on stderr.
+unset FORCE_COLOR
 
 : >"$LOG"
 results=()

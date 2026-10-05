@@ -105,6 +105,8 @@ function startCli(args: string[]) {
   const child = spawn(bin, args, {
     env: {
       ...process.env,
+      // With NO_COLOR also set, Node warns about it on stderr and breaks --json parsing.
+      FORCE_COLOR: undefined,
       TODO_CAT_URL: serverUrl,
       TODO_CAT_CONFIG_DIR: configDir,
     },

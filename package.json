@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:start": "bash scripts/dev-server.sh start",
+    "dev:stop": "bash scripts/dev-server.sh stop",
+    "dev:status": "bash scripts/dev-server.sh status",
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
@@ -17,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "qa": "bash scripts/qa.sh"
+    "qa": "bash scripts/qa.sh",
+    "ci:watch": "bash scripts/ci-watch.sh"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.7",
