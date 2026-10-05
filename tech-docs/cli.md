@@ -21,6 +21,7 @@
 - Error codes are the API's `ErrorCode`s plus the CLI's own (`usage`, `login-denied`, `login-expired`, `server-unreachable`, `unexpected-response`, `unexpected-error`); the exit code follows from the code (`EXIT_CODE` in `errors.ts`) and is listed in `todo-cat --help`.
 - Nothing prompts: `delete` refuses without `--yes`, and usage errors (commander's included) come out in the same format, as JSON when `--json` appears anywhere before `--`.
 - Every command's `--help` ends with examples.
+- The project skill `.claude/skills/todo-cat-cli/` teaches agents the workflows and pitfalls that `--help` can't (login etiquette, finding by title, `--json` with jq, which date a question means, when to delete); update it when a command's behavior changes, and keep `--help` the source of truth.
 
 ## Login
 

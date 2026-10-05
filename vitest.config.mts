@@ -15,7 +15,15 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: [...configDefaults.exclude, "e2e/**", ".next/**", ".next-e2e*/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      "e2e/**",
+      ".next/**",
+      ".next-e2e*/**",
+      // agent worktrees hold other checkouts of this repo
+      ".claude/**",
+      ".agents/**",
+    ],
     setupFiles: ["./vitest.setup.ts"],
     projects: [
       {

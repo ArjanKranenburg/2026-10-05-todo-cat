@@ -49,6 +49,8 @@
 
 - `tsconfig.json` lists the `.next-e2e/` and `.next-e2e-cli/` type globs on purpose; without them Next rewrites `tsconfig.json` on every e2e run.
 - The CLI's end-to-end test (`cli/src/todo-cat.test.ts`, see [cli.md](cli.md)) starts its own `next dev` in `.next-e2e-cli/`, so it is the slowest Vitest file, and it needs no running server.
+- That test parses the CLI's `--json` stderr, so it fails when a shell exports `FORCE_COLOR` (some agent harnesses do): Node then warns on stderr that `NO_COLOR` is ignored; run `env -u FORCE_COLOR npm run qa`.
+- Vitest skips `.claude/` and `.agents/` (a symlink to it), because agent worktrees there are full checkouts whose tests are not this checkout's.
 - After an e2e run, the gitignored `next-env.d.ts` points at `.next-e2e/` types until the next `npm run dev` or `npm run build` points it back; this is harmless.
 - The config is evaluated by the runner and by every worker, so the port, dist dir and database travel through their `E2E_*` env vars.
 - Next adds the type globs of any dist dir that `tsconfig.json` does not list yet, so a custom `E2E_DIST_DIR` rewrites `tsconfig.json`; revert that, and name the dir `.next-e2e*` so it stays gitignored.

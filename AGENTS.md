@@ -71,7 +71,7 @@ Index:
 - [database.md](tech-docs/database.md) — Drizzle on SQLite: the single `lib/db.ts` connection, the migration workflow, test databases and v1 gotchas.
 - [rest-api.md](tech-docs/rest-api.md) — the `/api/todos` endpoints, their schemas and status codes, and how to get a bearer token with curl.
 - [auth.md](tech-docs/auth.md) — Better Auth: config layout, the `getUserId` helper every adapter uses, server-action forms, schema generation and test setup.
-- [cli.md](tech-docs/cli.md) — the `todo-cat` CLI: commands, agent-friendly output and exit codes, device-flow login, credentials, the build and its end-to-end test.
+- [cli.md](tech-docs/cli.md) — the `todo-cat` CLI: commands, agent-friendly output and exit codes, device-flow login, credentials, the build, its end-to-end test, and the `todo-cat-cli` agent skill.
 
 ## Keeping this map current
 
