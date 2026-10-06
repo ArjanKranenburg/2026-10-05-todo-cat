@@ -32,6 +32,7 @@
 ## Gotchas
 
 - `lib/db.ts` reads `DATABASE_URL` when first imported, so tests must stub it before a dynamic `import()`.
+- The libsql client pools connections and by default fails at once with `SQLITE_BUSY` when another connection holds the write lock; `lib/db.ts` sets `timeout: 5_000`, and so must any other client that writes to a file the app has open (e2e seeding, scripts).
 - libsql needs the `file:` prefix; relative paths resolve against the working directory, which is the repo root for every npm script.
 - In v1 the SQLite `drizzle()` config has no `schema` option; relational queries take `relations` (Relational Queries v2), so follow the v1 docs, not 0.x examples.
 - `@next/env` is CommonJS without detectable named exports, so Node-run `.mts` scripts need its default import.

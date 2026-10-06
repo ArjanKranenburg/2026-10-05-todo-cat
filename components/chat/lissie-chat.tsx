@@ -7,6 +7,7 @@ import {
   CopilotKitProvider,
 } from "@copilotkit/react-core/v2";
 import { useSyncExternalStore } from "react";
+import { LissieToolCalls } from "./lissie-tool-calls";
 
 // Lissie's memory already holds the conversation, so a run sends only the
 // newest message; CopilotKit still renders the whole thread.
@@ -32,22 +33,32 @@ function usePrefersDark(): boolean {
 
 /**
  * The chat with Lissie over the CopilotKit runtime at /api/copilotkit.
- * `threadId` is the user's one conversation (`lissieThreadId`); the runtime
- * rejects any other, and replays this one's history from Lissie's memory.
+ * `threadId` is the user's current conversation (`currentLissieThread`); the
+ * runtime rejects other users' threads, and replays this one's history from
+ * Lissie's memory, tool calls included.
+ * `inspector` shows the CopilotKit Inspector, which CopilotKit itself limits
+ * to development builds on localhost.
  */
-export function LissieChat({ threadId }: { threadId: string }) {
+export function LissieChat({
+  threadId,
+  inspector,
+}: {
+  threadId: string;
+  inspector: boolean;
+}) {
   const dark = usePrefersDark();
   return (
     <div
-      className={`lissie-chat flex min-h-0 flex-1 flex-col ${dark ? "dark" : ""}`}
+      className={`lissie-chat flex min-h-0 min-w-0 flex-1 flex-col ${dark ? "dark" : ""}`}
     >
       <CopilotKitProvider
         runtimeUrl="/api/copilotkit"
         agentId="lissie"
         useSingleEndpoint={false}
-        enableInspector={false}
+        enableInspector={inspector}
         messageFilter={newestOnly}
       >
+        <LissieToolCalls />
         <CopilotChat
           threadId={threadId}
           className="min-h-0 flex-1"

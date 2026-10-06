@@ -73,9 +73,11 @@ around it. Hexagonal (ports and adapters), without the ceremony.
   401 `unauthorized` without either, 404 `todo-not-found`, 400 `validation-failed`;
   see [rest-api.md](rest-api.md).
 - **CLI** (`cli/`): a client of the REST API, never of the database; see [cli.md](cli.md).
-- **Chat** (`/api/copilotkit`): Lissie over CopilotKit and AG-UI; she cannot reach the todo service until her tools land; see [agent.md](agent.md).
-- **Agent tools** (later): call the service directly. The user id comes from the
-  server session, never from a tool argument the model fills in.
+- **Chat** (`/api/copilotkit`): Lissie over CopilotKit and AG-UI; it is the browser's only write path to the list; see [agent.md](agent.md).
+- **Agent tools** (`lib/lissie-tools.ts`): `listTodos`, `addTodo`, `setTodoDone` call the
+  service directly. The user id comes from the server session through Mastra's request
+  context, never from a tool argument the model fills in; service errors become the
+  tool's `{ error: { code, message } }` result.
 - **MCP**: over stdio inside the CLI (a REST client again), over HTTP inside the app
   (calls the service, like the REST routes).
 
@@ -98,4 +100,6 @@ around it. Hexagonal (ports and adapters), without the ceremony.
 
 - The service is tested against a temp database with **two users for every use case**:
   one user never sees, changes, or deletes the other's todos (`lib/todo-service.test.ts`).
-- Adapter tests cover only the mapping: 401 without a user, error codes, status codes.
+- Adapter tests cover only the mapping: 401 without a user, error codes, status codes;
+  the agent tools' tests (`lib/lissie-tools.test.ts`) cover the owner from the request
+  context and the error results.
