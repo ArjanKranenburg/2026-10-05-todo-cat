@@ -32,10 +32,19 @@ function usePrefersDark(): boolean {
 
 /**
  * The chat with Lissie over the CopilotKit runtime at /api/copilotkit.
- * `threadId` is the user's one conversation (`lissieThreadId`); the runtime
- * rejects any other, and replays this one's history from Lissie's memory.
+ * `threadId` is the user's current conversation (`currentLissieThread`); the
+ * runtime rejects other users' threads, and replays this one's history from
+ * Lissie's memory.
+ * `inspector` shows the CopilotKit Inspector, which CopilotKit itself limits
+ * to development builds on localhost.
  */
-export function LissieChat({ threadId }: { threadId: string }) {
+export function LissieChat({
+  threadId,
+  inspector,
+}: {
+  threadId: string;
+  inspector: boolean;
+}) {
   const dark = usePrefersDark();
   return (
     <div
@@ -45,7 +54,7 @@ export function LissieChat({ threadId }: { threadId: string }) {
         runtimeUrl="/api/copilotkit"
         agentId="lissie"
         useSingleEndpoint={false}
-        enableInspector={false}
+        enableInspector={inspector}
         messageFilter={newestOnly}
       >
         <CopilotChat

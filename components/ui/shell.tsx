@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 
 const widths = {
   // Forms and short pages, centered in the viewport.
-  narrow: "max-w-sm justify-center py-16",
-  // The chat: wider, exactly one viewport tall, so the chat scrolls instead of the page.
+  narrow: "flex-1 max-w-sm justify-center py-16",
+  // The chat: wider, exactly one viewport tall, so the chat scrolls instead of
+  // the page. No flex-1: as a grown flex item it would grow with its content.
   wide: "h-dvh max-w-2xl py-8",
 };
 
@@ -17,7 +18,7 @@ export function Shell({
 }) {
   return (
     <main
-      className={`mx-auto flex w-full flex-1 flex-col gap-8 px-4 ${widths[width]}`}
+      className={`mx-auto flex w-full flex-col gap-8 px-4 ${widths[width]}`}
     >
       {children}
     </main>

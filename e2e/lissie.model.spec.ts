@@ -34,9 +34,10 @@ test("Lissie answers, remembers the conversation, and keeps it to its owner", as
 
   await page.reload();
   await expect(page.getByTestId("copilot-user-message")).toHaveText(question);
-  await expect(page.getByTestId("copilot-assistant-message").last()).toHaveText(
-    reply,
-  );
+  // innerText on both sides: toHaveText reads textContent, which drops the
+  // break between paragraphs of a multi-paragraph reply.
+  const replayed = page.getByTestId("copilot-assistant-message").last();
+  await expect.poll(() => replayed.innerText()).toBe(reply);
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login$/);

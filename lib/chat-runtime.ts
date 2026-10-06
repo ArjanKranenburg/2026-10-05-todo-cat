@@ -11,15 +11,15 @@ import {
   InMemoryAgentRunner,
 } from "@copilotkit/runtime/v2";
 import { defer, from, mergeAll, type Observable } from "rxjs";
-import { lissieThreadId } from "./lissie";
 import { loadLissieHistory } from "./lissie-history";
+import { ownsLissieThread } from "./lissie-threads";
 import { mastra } from "./mastra";
 import { getUserId } from "./session";
 
 // The CopilotKit runtime that serves Lissie to the chat over AG-UI
 // (app/api/copilotkit, tech-docs/agent.md). It is also an authorization
-// boundary: every route needs a session, and the only thread a user may run,
-// connect to or stop is their own.
+// boundary: every route needs a session, and the only threads a user may run,
+// connect to or stop are their own.
 
 export const CHAT_BASE_PATH = "/api/copilotkit";
 export const LISSIE_AGENT_ID = "lissie";
@@ -53,11 +53,12 @@ const hooks: CopilotRuntimeHooks = {
   onRequest: async ({ request }) => {
     await requireUserId(request);
   },
-  // An allowlist: a route not named here is answered 404, because the default
-  // runner serves its thread routes (list, messages, events, state, clear)
-  // from one process-wide store that knows nothing about users.
+  // An allowlist: a route not named here is answered 404. The default runner
+  // serves its thread routes from one process-wide store that knows nothing
+  // about users, so those are allowed on the caller's own threads only.
   onBeforeHandler: async ({ request, route }) => {
-    const ownThread = lissieThreadId(await requireUserId(request));
+    const userId = await requireUserId(request);
+    const owns = (threadId: unknown) => ownsLissieThread(userId, threadId);
     switch (route.method) {
       case "info":
         return;
@@ -65,16 +66,31 @@ const hooks: CopilotRuntimeHooks = {
       case "agent/connect":
         if (
           route.agentId === LISSIE_AGENT_ID &&
-          (await bodyThreadId(request)) === ownThread
+          (await owns(await bodyThreadId(request)))
         ) {
           return;
         }
         throw notFound();
       case "agent/stop":
-        if (route.agentId === LISSIE_AGENT_ID && route.threadId === ownThread) {
+        if (route.agentId === LISSIE_AGENT_ID && (await owns(route.threadId))) {
           return;
         }
         throw notFound();
+      // What the CopilotKit Inspector reads to show a thread.
+      case "threads/messages":
+      case "threads/events":
+      case "threads/state":
+        if (await owns(route.threadId)) return;
+        throw notFound();
+      // The runtime would list every user's threads; answer with the caller's.
+      case "threads/list": {
+        const threads = runner.listThreads();
+        const own = await Promise.all(threads.map((t) => owns(t.id)));
+        throw Response.json({
+          threads: threads.filter((_, i) => own[i]),
+          nextCursor: null,
+        });
+      }
       default:
         throw notFound();
     }
@@ -119,6 +135,8 @@ async function history(threadId: string): Promise<Observable<BaseEvent>> {
   return from(events);
 }
 
+const runner = new LissieRunner();
+
 const runtime = new CopilotRuntime({
   // Per request, so Lissie's memory resource is the signed-in user.
   agents: async ({ request }) => ({
@@ -128,7 +146,7 @@ const runtime = new CopilotRuntime({
       resourceId: await requireUserId(request),
     }),
   }),
-  runner: new LissieRunner(),
+  runner,
   // By default the runtime copies the request's `authorization` and `x-*`
   // headers onto the agent, and the Mastra bridge sends them with every model
   // call: the user's session token would go to OpenRouter in place of our key.

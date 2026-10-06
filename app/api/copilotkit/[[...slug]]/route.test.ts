@@ -63,6 +63,7 @@ type Route = typeof import("./route");
 let db: typeof import("@/lib/db")["db"];
 let authRoute: typeof import("../../auth/[...all]/route");
 let route: Route;
+let threads: typeof import("@/lib/lissie-threads");
 
 beforeAll(async () => {
   // Same command as `npm run db:migrate`; the env var wins over .env.
@@ -80,6 +81,7 @@ beforeAll(async () => {
   ({ db } = await import("@/lib/db"));
   authRoute = await import("../../auth/[...all]/route");
   route = await import("./route");
+  threads = await import("@/lib/lissie-threads");
 }, 60_000);
 
 afterAll(() => {
@@ -96,7 +98,7 @@ interface User {
 
 let users = 0;
 
-/** Signs up through /api/auth and returns the user's id, bearer token and Lissie thread. */
+/** Signs up through /api/auth and returns the user's id, bearer token and current Lissie thread. */
 async function signUp(): Promise<User> {
   users += 1;
   const response = await authRoute.POST(
@@ -114,7 +116,9 @@ async function signUp(): Promise<User> {
   const token = response.headers.get("set-auth-token");
   if (!token) throw new Error("sign-up returned no set-auth-token header");
   const { user } = await response.json();
-  return { id: user.id, token, thread: `lissie-${user.id}` };
+  // What the page does on the user's first visit.
+  const thread = await threads.currentLissieThread(user.id);
+  return { id: user.id, token, thread };
 }
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
@@ -255,16 +259,12 @@ describe("with a session", () => {
     expect(Object.keys((await response.json()).agents)).toEqual(["lissie"]);
   });
 
-  // The default runner answers these from one process-wide store without
-  // users, and the rest are features the chat does not use.
+  // Features the chat and the Inspector do not use; some would act on the
+  // default runner's process-wide store, which knows nothing about users.
   const ownThreadRoutes = (thread: string): [Method, string, unknown?][] => [
     ["POST", "/agent/lissie/suggest", input(thread)],
     ["POST", "/trajectory/some-trajectory/connect"],
-    ["GET", "/threads"],
     ["POST", "/threads/subscribe"],
-    ["GET", `/threads/${thread}/messages`],
-    ["GET", `/threads/${thread}/events`],
-    ["GET", `/threads/${thread}/state`],
     ["POST", `/threads/${thread}/archive`],
     ["PATCH", `/threads/${thread}`, { name: "renamed" }],
     ["DELETE", `/threads/${thread}`],
@@ -278,7 +278,7 @@ describe("with a session", () => {
     ["GET", "/cpk-debug-events"],
   ];
 
-  test("routes beyond info, run, connect and stop answer 404, even for the user's own thread", async () => {
+  test("routes beyond the chat's and the Inspector's answer 404, even for the user's own thread", async () => {
     const alice = await signUp();
     await run(alice);
 
@@ -288,6 +288,38 @@ describe("with a session", () => {
     }
     // The conversation survived the clear and delete attempts.
     expect(await history(alice)).toHaveLength(2);
+  });
+
+  test("the Inspector reads only the user's own thread", async () => {
+    const alice = await signUp();
+    const bob = await signUp();
+    await run(alice);
+    await run(bob);
+
+    for (const resource of ["messages", "events", "state"]) {
+      const own = await call("GET", `/threads/${alice.thread}/${resource}`, {
+        token: alice.token,
+      });
+      expect(own.status, resource).toBe(200);
+      await expectNotFound(
+        await call("GET", `/threads/${alice.thread}/${resource}`, {
+          token: bob.token,
+        }),
+      );
+    }
+    const messages = await call("GET", `/threads/${alice.thread}/messages`, {
+      token: alice.token,
+    });
+    expect(JSON.stringify(await messages.json())).toContain("Add cat food.");
+
+    const listed = await call("GET", "/threads?agentId=lissie", {
+      token: alice.token,
+    });
+    expect(listed.status).toBe(200);
+    const { threads } = await listed.json();
+    expect(threads.map((thread: { id: string }) => thread.id)).toEqual([
+      alice.thread,
+    ]);
   });
 
   test("run, connect and stop accept only the user's own thread of Lissie", async () => {
@@ -308,7 +340,7 @@ describe("with a session", () => {
       await call("POST", `/agent/lissie/stop/${alice.thread}`, {
         token: bob.token,
       }),
-      // A thread id that is not the user's, and a run without one.
+      // A thread nobody has started, and a run without a thread id.
       await call("POST", "/agent/lissie/run", {
         token: alice.token,
         body: input(`${alice.thread}-2`),
@@ -373,7 +405,7 @@ describe("with a session", () => {
     }
   });
 
-  test("Lissie's memory is the user's: one thread, owned by their id", async () => {
+  test("Lissie's memory is the user's: the thread is owned by their id", async () => {
     const alice = await signUp();
     const bob = await signUp();
     model.reply = "Cat food. Finally, a sensible plan.";
@@ -393,6 +425,35 @@ describe("with a session", () => {
       }),
     ]);
     expect(await history(bob)).toEqual([]);
+  });
+
+  test("a new conversation is a fresh, current thread; the old one stays the user's", async () => {
+    const alice = await signUp();
+    const bob = await signUp();
+    await run(alice);
+
+    const fresh = await threads.startLissieThread(alice.id);
+
+    expect(fresh).not.toBe(alice.thread);
+    expect(await threads.currentLissieThread(alice.id)).toBe(fresh);
+    expect(await threads.currentLissieThread(bob.id)).toBe(bob.thread);
+    expect(await history(alice, fresh)).toEqual([]);
+    expect(await history(alice)).toHaveLength(2);
+    await expectNotFound(
+      await call("POST", "/agent/lissie/connect", {
+        token: bob.token,
+        body: input(fresh, []),
+      }),
+    );
+
+    // Lissie starts over: the old conversation is not in the new one's context.
+    const callsBefore = model.calls.length;
+    await run({ ...alice, thread: fresh }, [
+      { id: `hello-${fresh}`, role: "user", content: "Hello again." },
+    ]);
+    const sent = JSON.stringify(model.calls[callsBefore].prompt);
+    expect(sent).toContain("Hello again.");
+    expect(sent).not.toContain("Add cat food.");
   });
 
   test("the conversation survives a restart: connect replays it from the database", async () => {

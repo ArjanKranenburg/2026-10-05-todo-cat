@@ -27,15 +27,7 @@ export const lissie = new Agent({
   name: "Lissie",
   instructions: LISSIE_INSTRUCTIONS,
   model: lissieModel,
-  // One long-lived thread per user: keep the recent part of it in context,
-  // measured in tokens rather than messages. The rest stays in storage.
+  // A conversation can run long: keep its recent part in context, measured in
+  // tokens rather than messages. The rest stays in storage.
   memory: new Memory({ options: { messageHistory: { maxTokens: 16_000 } } }),
 });
-
-/**
- * The one conversation a user has with Lissie: the chat's AG-UI thread and
- * Lissie's memory thread. The memory resource is the user id itself.
- */
-export function lissieThreadId(userId: string): string {
-  return `lissie-${userId}`;
-}
