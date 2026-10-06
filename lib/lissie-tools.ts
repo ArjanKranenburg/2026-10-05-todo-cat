@@ -1,10 +1,12 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import {
   MASTRA_RESOURCE_ID_KEY,
   type RequestContext,
 } from "@mastra/core/request-context";
 import { createTool } from "@mastra/core/tools";
 import type { ErrorBody } from "@todo-cat/contract";
+import { progressCard, progressOf } from "./lissie-progress";
 import {
   LISSIE_TOOL_INPUTS,
   ListTodosOutput,
@@ -80,9 +82,24 @@ export const setTodoDoneTool = createTool({
   },
 });
 
+export const showProgressTool = createTool({
+  id: "showProgress",
+  description:
+    "Shows your human a card in the chat with their progress on the whole list: how many to-dos there are, how many are done and how many are still open. The card shows the numbers itself.",
+  inputSchema: LISSIE_TOOL_INPUTS.showProgress,
+  // The result is the card's A2UI operations, which the runtime's A2UI
+  // middleware renders (lib/lissie-progress.ts); counting happens here.
+  execute: async (_input, { requestContext }) => {
+    const userId = ownerOf(requestContext);
+    const progress = progressOf(await listTodos(userId));
+    return progressCard(`progress-${randomUUID()}`, progress);
+  },
+});
+
 /** Keyed by tool id, which is the name the model and the chat see. */
 export const lissieTools = {
   listTodos: listTodosTool,
   addTodo: addTodoTool,
   setTodoDone: setTodoDoneTool,
+  showProgress: showProgressTool,
 };

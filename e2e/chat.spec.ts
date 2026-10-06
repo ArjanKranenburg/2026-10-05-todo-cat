@@ -1,6 +1,7 @@
 import { createClient } from "@libsql/client";
 import type { StorageDomains } from "@mastra/core/storage";
 import { expect, type Page, test } from "@playwright/test";
+import { progressCard } from "../lib/lissie-progress";
 import { mastraStorage } from "../lib/mastra-storage";
 
 // The chat on / without calling the model; e2e/lissie.model.spec.ts talks to it.
@@ -72,8 +73,9 @@ async function seedLongConversation(email: string) {
 }
 
 /**
- * Writes one of Lissie's turns with three tool calls (one failed) into the
- * thread the user's first visit to / started, as Mastra stores it.
+ * Writes one of Lissie's turns with four tool calls (one failed, one a
+ * progress card) into the thread the user's first visit to / started, as
+ * Mastra stores it.
  */
 async function seedToolCalls(email: string) {
   await withMemory(email, async ({ memory, resourceId, threadId }) => {
@@ -143,6 +145,12 @@ async function seedToolCalls(email: string) {
                     message: "There is no to-do with id nope.",
                   },
                 },
+              ),
+              call(
+                "call-4",
+                "showProgress",
+                {},
+                progressCard("progress-seed", { total: 2, done: 1, open: 1 }),
               ),
               { type: "step-start" },
               { type: "text", text: "Milk. Noted." },
@@ -263,7 +271,7 @@ test("the sidebar shows the user's open and done to-dos, read-only", async ({
   await expect(sidebar.getByRole("checkbox")).toHaveCount(0);
 });
 
-test("Lissie's tool calls replay as one readable line each", async ({
+test("Lissie's tool calls replay as one readable line each, cards included", async ({
   page,
 }) => {
   const email = await signUp(page);
@@ -275,7 +283,12 @@ test("Lissie's tool calls replay as one readable line each", async ({
     "✓Looked through your list: 0 open, 1 done",
     "✓Added “buy milk”",
     "✕Could not change that to-do: There is no to-do with id nope.",
+    "✓Counted your list",
   ]);
+  const progress = conversation.getByRole("progressbar", { name: "Done" });
+  await expect(progress).toHaveAttribute("aria-valuenow", "1");
+  await expect(progress).toHaveAttribute("aria-valuemax", "2");
+  await expect(conversation.getByText("1 of 2 done, 1 open")).toBeVisible();
   await expect(conversation.getByText("Milk. Noted.")).toBeVisible();
   // No raw tool arguments or results anywhere in the chat.
   await expect(conversation.getByText("toolCallId")).toHaveCount(0);

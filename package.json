@@ -26,10 +26,12 @@
     "ci:watch": "bash scripts/ci-watch.sh"
   },
   "dependencies": {
+    "@a2ui/web_core": "0.10.4",
     "@ag-ui/client": "1.0.1",
     "@ag-ui/core": "1.0.1",
     "@ag-ui/mastra": "1.1.6",
     "@better-auth/drizzle-adapter": "1.7.7",
+    "@copilotkit/a2ui-renderer": "1.77.0",
     "@copilotkit/react-core": "1.77.0",
     "@copilotkit/runtime": "1.77.0",
     "@libsql/client": "^0.18.0",
@@ -44,7 +46,8 @@
     "rxjs": "7.8.1",
     "server-only": "^0.0.1",
     "zod": "^4.6.5",
-    "zod-openapi": "^6.0.2"
+    "zod-openapi": "^6.0.2",
+    "zod3": "npm:zod@3.25.76"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

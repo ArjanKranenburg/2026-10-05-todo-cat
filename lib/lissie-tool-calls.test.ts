@@ -63,6 +63,17 @@ describe("describeToolCall", () => {
     ).toBe("Looked through your open to-dos for “cat”: 1 open");
   });
 
+  test("leaves the progress numbers to the card", () => {
+    const card = { a2ui_operations: [{ version: "v0.9" }] };
+    expect(textOf("showProgress", {}, undefined)).toBe("Counting your list…");
+    expect(textOf("showProgress", {}, JSON.stringify(card))).toBe(
+      "Counted your list",
+    );
+    expect(textOf("showProgress", {}, { error: true, message: "…" })).toBe(
+      "Could not count your list: the request did not fit the list's rules.",
+    );
+  });
+
   test("tells running, done and failed calls apart", () => {
     expect(describeToolCall("addTodo", {}, undefined).outcome).toBe("running");
     expect(describeToolCall("setTodoDone", {}, todo).outcome).toBe("done");

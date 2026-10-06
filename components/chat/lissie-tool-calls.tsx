@@ -63,6 +63,7 @@ export function LissieToolCalls() {
   useToolCallLine("listTodos");
   useToolCallLine("addTodo");
   useToolCallLine("setTodoDone");
+  useToolCallLine("showProgress");
 
   const router = useRouter();
   // No re-renders: this only listens to the run's events.

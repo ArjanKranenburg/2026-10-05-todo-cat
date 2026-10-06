@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { A2uiMessageListSchema, BASIC_COMPONENTS } from "@a2ui/web_core/v0_9";
 import {
   MASTRA_RESOURCE_ID_KEY,
   RequestContext,
@@ -15,6 +16,8 @@ import {
   test,
   vi,
 } from "vitest";
+import { LISSIE_CATALOG_ID, lissieCatalogDefinitions } from "./lissie-catalog";
+import { PROGRESS_CARD } from "./lissie-progress";
 
 // Lissie's tool executors on a migrated temp database, called the way Mastra
 // calls them: input first, the request context the runtime built second.
@@ -201,6 +204,111 @@ describe("setTodoDone", () => {
   });
 });
 
+describe("showProgress", () => {
+  // The contract of every component the card may use: the basic catalog's,
+  // overridden by Lissie's catalog, as in the chat (components/chat).
+  const catalog = new Map<string, { safeParse(value: unknown): unknown }>([
+    ...BASIC_COMPONENTS.map((api) => [api.name, api.schema] as const),
+    ...Object.entries(lissieCatalogDefinitions).map(
+      ([name, definition]) => [name, definition.props] as const,
+    ),
+  ]);
+
+  /**
+   * Checks the operations of one card the way a renderer needs them, and
+   * returns its surface's components and data model.
+   */
+  function expectWellFormedCard(result: unknown) {
+    const operations = A2uiMessageListSchema.parse(
+      (result as { a2ui_operations: unknown }).a2ui_operations,
+    );
+    const [create, update, data] = operations;
+    if (
+      !("createSurface" in create) ||
+      !("updateComponents" in update) ||
+      !("updateDataModel" in data)
+    ) {
+      throw new Error(`not a new surface: ${JSON.stringify(operations)}`);
+    }
+    expect(operations).toHaveLength(3);
+    const { surfaceId, catalogId } = create.createSurface;
+    expect(catalogId).toBe(LISSIE_CATALOG_ID);
+    expect(update.updateComponents.surfaceId).toBe(surfaceId);
+    expect(data.updateDataModel).toMatchObject({ surfaceId, path: "/" });
+
+    const { components } = update.updateComponents;
+    const ids = components.map((component) => component.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain("root");
+    for (const { id, component, ...props } of components) {
+      const schema = catalog.get(component);
+      expect(schema, `${id}: unknown component ${component}`).toBeDefined();
+      expect(schema?.safeParse(props), id).toMatchObject({ success: true });
+      // Every child it names exists.
+      const children = [props.child, props.children].flat();
+      for (const child of children.filter((c) => typeof c === "string")) {
+        expect(ids, `${id} → ${child}`).toContain(child);
+      }
+    }
+    return { components, model: data.updateDataModel.value };
+  }
+
+  /** Every data model path the components read, bound or interpolated. */
+  function boundPaths(components: unknown): string[] {
+    const json = JSON.stringify(components);
+    return [
+      ...[...json.matchAll(/"path":"([^"]+)"/g)].map((match) => match[1]),
+      ...[...json.matchAll(/\$\{([^}]+)\}/g)].map((match) => match[1]),
+    ];
+  }
+
+  test("returns a well-formed A2UI card whose numbers are the user's rows", async () => {
+    const milk = await service.addTodo(alice, { title: "buy milk" });
+    await service.addTodo(alice, { title: "feed the cat" });
+    await service.addTodo(alice, { title: "nap" });
+    await service.updateTodo(alice, milk.id, { done: true });
+    await service.addTodo(bob, { title: "Bob's only to-do" });
+
+    const card = expectWellFormedCard(
+      await execute(tools.showProgress, {}, signedIn(alice)),
+    );
+
+    expect(card.model).toEqual({ total: 3, done: 1, open: 2 });
+    for (const path of boundPaths(card.components)) {
+      expect(card.model, path).toHaveProperty(path.slice(1).split("/"));
+    }
+  });
+
+  test("binds the numbers through the data model: the tree is the same for every list", async () => {
+    await service.addTodo(bob, { title: "Bob's only to-do" });
+
+    const empty = expectWellFormedCard(
+      await execute(tools.showProgress, {}, signedIn(alice)),
+    );
+    const bobs = expectWellFormedCard(
+      await execute(tools.showProgress, {}, signedIn(bob)),
+    );
+
+    expect(empty.model).toEqual({ total: 0, done: 0, open: 0 });
+    expect(bobs.model).toEqual({ total: 1, done: 0, open: 1 });
+    expect(empty.components).toEqual(PROGRESS_CARD);
+    expect(bobs.components).toEqual(PROGRESS_CARD);
+    expect(JSON.stringify(PROGRESS_CARD)).not.toMatch(/\d/);
+  });
+
+  test("takes no input, so no owner either", async () => {
+    await service.addTodo(bob, { title: "Bob's only to-do" });
+
+    const result = await execute(
+      tools.showProgress,
+      { userId: bob },
+      signedIn(alice),
+    );
+
+    expect(result).toMatchObject({ error: true });
+  });
+});
+
 test("without a signed-in user in the request context, no tool runs", async () => {
   const anonymous = new RequestContext();
 
@@ -208,6 +316,9 @@ test("without a signed-in user in the request context, no tool runs", async () =
     execute(tools.addTodo, { title: "buy milk" }, anonymous),
   ).rejects.toThrow("without a signed-in user");
   await expect(execute(tools.listTodos, {}, anonymous)).rejects.toThrow(
+    "without a signed-in user",
+  );
+  await expect(execute(tools.showProgress, {}, anonymous)).rejects.toThrow(
     "without a signed-in user",
   );
   expect(await titles(alice)).toEqual([]);

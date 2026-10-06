@@ -1,5 +1,5 @@
 import "server-only";
-import type { Message, ToolCall } from "@ag-ui/core";
+import type { ActivityMessage, Message, ToolCall } from "@ag-ui/core";
 import type { MastraDBMessage } from "@mastra/core/agent/message-list";
 import { mastra } from "./mastra";
 
@@ -29,8 +29,8 @@ export async function loadLissieHistory(threadId: string): Promise<Message[]> {
  * assistant message per run of text followed by its tool calls, each call's
  * result as a tool message after it, as the live stream shows them. The first
  * keeps the stored id, which the Mastra bridge matches to skip history it
- * already has. Calls without a result (an aborted run) and other parts are
- * dropped.
+ * already has. A result that is a card (A2UI operations) is followed by the
+ * card. Calls without a result (an aborted run) and other parts are dropped.
  */
 export function toChatMessages(stored: MastraDBMessage[]): Message[] {
   return stored.flatMap((message): Message[] => {
@@ -76,12 +76,15 @@ function assistantSteps(message: MastraDBMessage): Message[] {
         type: "function",
         function: { name: toolName, arguments: JSON.stringify(args ?? {}) },
       });
-      target.results.push({
-        id: `${toolCallId}-result`,
-        role: "tool",
-        toolCallId,
-        content: JSON.stringify(result),
-      });
+      target.results.push(
+        {
+          id: `${toolCallId}-result`,
+          role: "tool",
+          toolCallId,
+          content: JSON.stringify(result),
+        },
+        ...cardOf(toolCallId, result),
+      );
     }
   }
   return steps.flatMap((step, index): Message[] => {
@@ -94,4 +97,25 @@ function assistantSteps(message: MastraDBMessage): Message[] {
     };
     return [assistant, ...step.results];
   });
+}
+
+/**
+ * A card a tool returned (lib/lissie-progress.ts), as the activity message the
+ * runtime's A2UI middleware made of it during the run, with the same id.
+ */
+function cardOf(toolCallId: string, result: unknown): ActivityMessage[] {
+  const isCard =
+    typeof result === "object" &&
+    result !== null &&
+    "a2ui_operations" in result &&
+    Array.isArray(result.a2ui_operations);
+  if (!isCard) return [];
+  return [
+    {
+      id: `a2ui-surface-${toolCallId}`,
+      role: "activity",
+      activityType: "a2ui-surface",
+      content: { a2ui_operations: result.a2ui_operations },
+    },
+  ];
 }

@@ -12,7 +12,11 @@ const dir = mkdtempSync(join(tmpdir(), "todo-cat-chat-test-"));
 const url = `file:${join(dir, "test.db")}`;
 const origin = "http://localhost:3000";
 
-type CallOptions = { prompt: unknown; headers?: Record<string, unknown> };
+type CallOptions = {
+  prompt: unknown;
+  headers?: Record<string, unknown>;
+  tools?: { name: string }[];
+};
 
 type ToolCall = { toolName: string; input: unknown };
 
@@ -608,6 +612,56 @@ describe("Lissie's tools", () => {
       expect.objectContaining({ error: true }),
       { error: { code: "todo-not-found", message: expect.any(String) } },
     ]);
+  });
+
+  test("showProgress paints its card in the chat, and the model gets no UI tool", async () => {
+    const alice = await signUp();
+    await todos.addTodo(alice.id, { title: "feed the cat" });
+    model.toolCalls = [[{ toolName: "showProgress", input: {} }]];
+    model.reply = "One. That is all you had.";
+    model.calls = [];
+
+    const response = await call("POST", "/agent/lissie/run", {
+      token: alice.token,
+      body: {
+        ...input(alice.thread),
+        // What a client with an A2UI catalog sends, and what would make the
+        // Mastra bridge add its own UI-generating tool.
+        forwardedProps: { a2uiCatalogAvailable: true, injectA2UITool: true },
+      },
+    });
+    const events = parseEvents(await response.text());
+
+    const result = events.find((event) => event.type === "TOOL_CALL_RESULT");
+    const card = events.find((event) => event.type === "ACTIVITY_SNAPSHOT");
+    expect(card).toMatchObject({
+      messageId: `a2ui-surface-${result?.toolCallId}`,
+      activityType: "a2ui-surface",
+      content: JSON.parse(String(result?.content)),
+    });
+    expect(card?.content).toMatchObject({
+      a2ui_operations: expect.arrayContaining([
+        expect.objectContaining({
+          updateDataModel: expect.objectContaining({
+            value: { total: 1, done: 0, open: 1 },
+          }),
+        }),
+      ]),
+    });
+    const offered = model.calls.flatMap((options) =>
+      (options.tools ?? []).map((tool) => tool.name),
+    );
+    expect(new Set(offered)).toEqual(
+      new Set(["listTodos", "addTodo", "setTodoDone", "showProgress"]),
+    );
+
+    // A reload shows the card again, under the id it had live.
+    expect(await history(alice)).toContainEqual({
+      id: card?.messageId,
+      role: "activity",
+      activityType: "a2ui-surface",
+      content: card?.content,
+    });
   });
 
   test("tool calls survive a restart: connect replays them with their results", async () => {

@@ -80,3 +80,38 @@ test("Lissie adds a to-do with her tool, and the sidebar shows it at once", asyn
   await expect(line).toHaveCount(1);
   await expect(open.getByRole("listitem")).toHaveText(["buy milk"]);
 });
+
+test("Lissie shows the list's progress as a card with the service's numbers", async ({
+  page,
+}) => {
+  await signUp(page, "Counter");
+  // The REST API, with the browser's session cookie.
+  const ids: string[] = [];
+  for (const title of ["buy milk", "feed the cat", "nap"]) {
+    const response = await page.request.post("/api/todos", { data: { title } });
+    expect(response.ok()).toBe(true);
+    ids.push((await response.json()).id);
+  }
+  const done = await page.request.patch(`/api/todos/${ids[1]}`, {
+    data: { done: true },
+  });
+  expect(done.ok()).toBe(true);
+
+  const ran = page.waitForResponse((response) =>
+    response.url().endsWith("/api/copilotkit/agent/lissie/run"),
+  );
+  await page
+    .getByPlaceholder("Tell Lissie what needs doing…")
+    .fill("How am I doing with my list?");
+  await page.getByTestId("copilot-send-button").click();
+  await (await ran).finished();
+
+  const conversation = page.getByTestId("copilot-message-list");
+  const bar = conversation.getByRole("progressbar", { name: "Done" });
+  await expect(bar).toHaveAttribute("aria-valuenow", "1");
+  await expect(bar).toHaveAttribute("aria-valuemax", "3");
+  await expect(conversation.getByText("1 of 3 done, 2 open")).toBeVisible();
+
+  await page.reload();
+  await expect(bar).toHaveAttribute("aria-valuenow", "1");
+});

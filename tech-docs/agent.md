@@ -16,6 +16,7 @@ Lissie is a Mastra agent that the chat on `/` reaches through CopilotKit over AG
 ## Packages
 
 - `@mastra/core`, `@mastra/memory`, `@mastra/libsql`, `@ag-ui/mastra`, `@ag-ui/client`, `@ag-ui/core`, `@copilotkit/react-core` and `@copilotkit/runtime` are pinned to the exact versions this integration was built and tested with; upgrade them together and rerun the tests. `rxjs` is pinned to the 7.8.1 they all pin.
+- `@copilotkit/a2ui-renderer` and `@a2ui/web_core` are pinned to the versions `@copilotkit/react-core` and `@copilotkit/a2ui-renderer` depend on; `zod3` is an alias of the zod 3 release A2UI ships, see Cards.
 - Use only the v2 surfaces: `@copilotkit/runtime/v2` and `@copilotkit/react-core/v2`. The package roots are the deprecated v1 API and still import fine, then fail at runtime.
 - Read the docs through the `mastra` and `copilotkit` skills; Mastra's embedded docs in `node_modules/@mastra/*/dist/docs/` match the installed version.
 
@@ -27,6 +28,7 @@ Lissie is a Mastra agent that the chat on `/` reaches through CopilotKit over AG
 ## Tools
 
 - `listTodos`, `addTodo` and `setTodoDone` (`lib/lissie-tools.ts`) are an adapter on the todo service (see [architecture.md](architecture.md)); she cannot rename, reschedule or delete yet.
+- `showProgress` counts the list with the service and returns a card (see Cards); the instructions tell her not to repeat its numbers.
 - `lib/lissie-tool-calls.ts` holds what the model and the chat share and has no server code: the tool names, their input schemas (the contract's, plus `SetTodoDoneInput`), and `describeToolCall`, the one line the chat shows per call.
 - **The owner comes from the server session only.** The runtime's agents factory resolves the user per request and passes `requestContext: new RequestContext([[MASTRA_RESOURCE_ID_KEY, userId]])` to `getLocalAgent`; each tool reads that key and throws without it. `MASTRA_RESOURCE_ID_KEY` is Mastra's own key for the authenticated resource, which also wins over `memory.resource`.
 - Nothing from the client reaches that context: the bridge files the AG-UI `context` under its own `ag-ui` key and ignores `forwardedProps` and `state` for it; the input schemas are strict, so a `userId` argument from the model fails validation.
@@ -44,6 +46,18 @@ Lissie is a Mastra agent that the chat on `/` reaches through CopilotKit over AG
 - Storage is a `MastraCompositeStore` with only the memory domain (`lib/mastra-storage.ts`) on `lib/db.ts`'s libsql client, so Mastra adds just `mastra_threads`, `mastra_messages`, `mastra_resources` and `mastra_observational_memory` to our file, and no second connection exists.
 - The app builds it with `disableInit`; `npm run db:migrate` runs `scripts/mastra-migrate.mts` after the Drizzle migrations, which creates or updates those tables. Rerun it after upgrading `@mastra/*`. Drizzle neither knows nor touches them.
 - Mastra's memory does no access control: `recall` and `getThreadById` return any thread they are asked for. Only the runtime's ownership check stands between users.
+
+## Cards (A2UI)
+
+- A tool that returns `{ a2ui_operations: [...] }` (A2UI v0.9 messages) gets a card in the chat: the runtime's A2UI middleware (`a2ui` in `lib/chat-runtime.ts`) turns that result into an `a2ui-surface` activity message, which CopilotKit renders with the chat's catalog. `showProgress` is the only one.
+- Cards are authored, not generated. `lib/lissie-progress.ts` holds the progress card's component tree, written once; the numbers reach it only through `updateDataModel` and bindings (`{ path }`, `formatString`), so the tree is the same for every list and no second model call is made.
+- Nothing may inject a UI-generating tool. The runtime sets `injectA2UITool: false`, because a catalog on the provider would otherwise switch on the middleware's `render_a2ui`. The agent is built with `new MastraAgent` (what `getLocalAgent` does) to pass `a2ui: { injectA2UITool: false }`, because `@ag-ui/mastra` otherwise adds `generate_a2ui`, with its own model call, whenever the client's `forwardedProps.injectA2UITool` asks.
+- The provider passes `includeSchema: false`, so the catalog's schema and A2UI's generation guidelines stay out of the run's context.
+- The catalog is the basic catalog plus our components: contracts in `lib/lissie-catalog.ts` (no React, so the server and its tests check cards against them), renderers in `components/chat/lissie-catalog.tsx`. `createSurface` must name `LISSIE_CATALOG_ID`.
+- It adds `ProgressBar` (`components/chat/progress-bar.tsx`) and replaces the basic `Card`, which paints a white box with grey borders whatever the theme; our renderers use the `--chat-*` aliases.
+- A prop the data model may bind must be a `Dynamic*Schema` union in its contract: A2UI decides from the schema whether to resolve a prop, and passes a plain `z.number()` prop on as the raw `{ path }` object.
+- Contracts are zod 3 (`zod3`): A2UI inspects them through zod 3 internals (`_def.typeName`), and TypeScript only accepts schemas from a zod copy of the very version A2UI's types use.
+- History replays a card: `toChatMessages` follows a result that holds `a2ui_operations` with the activity message the middleware made live, id `a2ui-surface-<toolCallId>`.
 
 ## The runtime is an authorization boundary
 
@@ -79,9 +93,11 @@ Lissie is a Mastra agent that the chat on `/` reaches through CopilotKit over AG
 ## Testing
 
 - `route.test.ts` replaces `lib/lissie-model.ts` with `MockLanguageModelV4` from `ai/test` (`ai` is a dev dependency only for this); its gate holds a run open for the in-flight tests, and `model.toolCalls` scripts tool calls, one batch per model call, before the reply. Its tool tests check that the owner ignores the request's `context`, `forwardedProps` and `state`, that the model cannot pass one, and that tool calls replay after a restart.
-- `lib/lissie-tools.test.ts` runs the tool executors on a temp database with two users; `lib/lissie-tool-calls.test.ts` covers the chat's lines.
-- `e2e/chat.spec.ts` (in QA) checks that `/` shows the chat and connects, that a long conversation (seeded through Mastra's memory store into the e2e database) scrolls inside the chat while the page does not, that "New conversation" empties the chat for good, that the sidebar shows open and done to-dos without controls, and that seeded tool calls replay as one line each, all without calling the model.
-- `e2e/lissie.model.spec.ts` talks to the real model and runs only with `npm run test:e2e:model`, never in QA or CI; it needs `OPENROUTER_API_KEY` in `.env`. It asks Lissie to add "buy milk" and finds it in the sidebar without a reload.
+- `lib/lissie-tools.test.ts` runs the tool executors on a temp database with two users, and checks `showProgress`'s card against A2UI's v0.9 message schemas and the catalog's contracts; `lib/lissie-tool-calls.test.ts` covers the chat's lines.
+- `components/chat/progress-bar.test.tsx` renders `ProgressBar`, and the progress card's operations through the chat's catalog with A2UI's own renderer.
+- `route.test.ts` checks that a `showProgress` run streams the card as an activity, that the model is offered no UI tool even when the client's `forwardedProps` ask for one, and that the card replays.
+- `e2e/chat.spec.ts` (in QA) checks that `/` shows the chat and connects, that a long conversation (seeded through Mastra's memory store into the e2e database) scrolls inside the chat while the page does not, that "New conversation" empties the chat for good, that the sidebar shows open and done to-dos without controls, and that seeded tool calls replay as one line each and a seeded card as a progress bar, all without calling the model.
+- `e2e/lissie.model.spec.ts` talks to the real model and runs only with `npm run test:e2e:model`, never in QA or CI; it needs `OPENROUTER_API_KEY` in `.env`. It asks Lissie to add "buy milk" and finds it in the sidebar without a reload, and asks how the list is going and finds the progress card with the list's numbers.
 
 ## Gotchas
 

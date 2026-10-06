@@ -7,7 +7,12 @@ import {
   CopilotKitProvider,
 } from "@copilotkit/react-core/v2";
 import { useSyncExternalStore } from "react";
+import { lissieCatalog } from "./lissie-catalog";
 import { LissieToolCalls } from "./lissie-tool-calls";
+
+// The A2UI components Lissie's cards use. The schema stays out of the run's
+// context: she never generates UI, her tools return finished cards.
+const a2ui = { catalog: lissieCatalog, includeSchema: false };
 
 // Lissie's memory already holds the conversation, so a run sends only the
 // newest message; CopilotKit still renders the whole thread.
@@ -57,6 +62,7 @@ export function LissieChat({
         useSingleEndpoint={false}
         enableInspector={inspector}
         messageFilter={newestOnly}
+        a2ui={a2ui}
       >
         <LissieToolCalls />
         <CopilotChat

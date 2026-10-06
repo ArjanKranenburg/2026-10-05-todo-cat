@@ -149,15 +149,24 @@ const runtime = new CopilotRuntime({
   agents: async ({ request }) => {
     const userId = await requireUserId(request);
     return {
-      [LISSIE_AGENT_ID]: MastraAgent.getLocalAgent({
-        mastra,
+      // What MastraAgent.getLocalAgent builds, plus the A2UI switch it lacks.
+      [LISSIE_AGENT_ID]: new MastraAgent({
         agentId: LISSIE_AGENT_ID,
+        agent: mastra.getAgent(LISSIE_AGENT_ID),
         resourceId: userId,
         requestContext: new RequestContext([[MASTRA_RESOURCE_ID_KEY, userId]]),
+        // The bridge would add a UI-generating tool (and a second model call)
+        // whenever the request's forwardedProps ask for one.
+        a2ui: { injectA2UITool: false },
       }),
     };
   },
   runner,
+  // Renders the A2UI operations Lissie's own tools return (showProgress) as
+  // cards in the chat. Her cards are authored, not generated: the middleware
+  // must not inject its render tool, which a catalog on the client would
+  // otherwise switch on.
+  a2ui: { agents: [LISSIE_AGENT_ID], injectA2UITool: false },
   // By default the runtime copies the request's `authorization` and `x-*`
   // headers onto the agent, and the Mastra bridge sends them with every model
   // call: the user's session token would go to OpenRouter in place of our key.

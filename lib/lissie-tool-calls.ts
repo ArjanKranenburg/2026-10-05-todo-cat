@@ -18,6 +18,9 @@ export const SetTodoDoneInput = z.strictObject({
 });
 export type SetTodoDoneInput = z.output<typeof SetTodoDoneInput>;
 
+/** showProgress counts the whole list; there is nothing to choose. */
+export const ShowProgressInput = z.strictObject({});
+
 export const ListTodosOutput = z.union([
   z.object({ todos: TodoList }),
   ErrorBody,
@@ -28,6 +31,7 @@ export const LISSIE_TOOL_INPUTS = {
   listTodos: TodoListFilter,
   addTodo: CreateTodoInput,
   setTodoDone: SetTodoDoneInput,
+  showProgress: ShowProgressInput,
 };
 export type LissieToolName = keyof typeof LISSIE_TOOL_INPUTS;
 
@@ -115,10 +119,16 @@ function describeSetDone(args: unknown, result: unknown): string {
     : "Marking a to-do done…";
 }
 
+// The card itself shows the numbers (lib/lissie-progress.ts).
+function describeProgress(result: unknown): string {
+  return result === undefined ? "Counting your list…" : "Counted your list";
+}
+
 const failures: Record<LissieToolName, string> = {
   listTodos: "Could not look through your list",
   addTodo: "Could not add that to-do",
   setTodoDone: "Could not change that to-do",
+  showProgress: "Could not count your list",
 };
 
 /** A tool call as one line of the chat, and how the call went. */
@@ -149,5 +159,7 @@ export function describeToolCall(
       return { text: describeAdd(args, result), outcome };
     case "setTodoDone":
       return { text: describeSetDone(args, result), outcome };
+    case "showProgress":
+      return { text: describeProgress(result), outcome };
   }
 }
