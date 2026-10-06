@@ -236,15 +236,14 @@ test("New conversation starts an empty chat that stays current after a reload", 
   expect(errors).toEqual([]);
 });
 
-test("the sidebar shows the user's open and done to-dos, read-only", async ({
+test("the todo panel shows the user's open and done to-dos", async ({
   page,
 }) => {
   await signUp(page);
   const sidebar = page.getByRole("complementary", { name: "Your to-dos" });
   await expect(sidebar.getByText("Nothing open. Suspicious.")).toBeVisible();
 
-  // The REST API with the browser's session cookie; the page itself has no
-  // way to change the list.
+  // Seed two todos via the REST API; the panel reloads them on page refresh.
   for (const title of ["buy milk", "feed the cat"]) {
     const added = await page.request.post("/api/todos", { data: { title } });
     expect(added.status()).toBe(201);
@@ -259,8 +258,8 @@ test("the sidebar shows the user's open and done to-dos, read-only", async ({
   const done = sidebar.getByRole("region", { name: /Done/ });
   await expect(open.getByRole("listitem")).toHaveText(["buy milk"]);
   await expect(done.getByRole("listitem")).toHaveText(["feed the cat"]);
-  await expect(sidebar.getByRole("button")).toHaveCount(0);
-  await expect(sidebar.getByRole("checkbox")).toHaveCount(0);
+  // The panel is interactive: each todo has a cat-eye checkbox.
+  await expect(sidebar.getByRole("checkbox")).toHaveCount(2);
 });
 
 test("Lissie's tool calls replay as one readable line each", async ({

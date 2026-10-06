@@ -1,13 +1,15 @@
 @import "tailwindcss";
 
+/* Cold Ledger: a cat's account book. Cool off-white base, violet-tinged darks,
+   amber accent (Lissie's eyes), Lora for headings, Space Grotesk for UI. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --muted: #5f5b6b;
-  --line: #d4d1dc;
-  /* Lissie's eyes: keyboard focus and nothing else. */
+  --background: #f5f4f8;
+  --foreground: #1a1825;
+  --muted: #6b6876;
+  --line: #d4d0de;
+  /* Lissie's eyes: keyboard focus and the done state's cat eye. */
   --accent: #f2b705;
-  --danger: #b42318;
+  --danger: #c41e3a;
 }
 
 @theme inline {
@@ -17,16 +19,17 @@
   --color-line: var(--line);
   --color-accent: var(--accent);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-lora);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --muted: #a19cad;
-    --line: #3a3744;
+    --background: #100f18;
+    --foreground: #edecf1;
+    --muted: #9390a4;
+    --line: #2b293a;
     --danger: #f97066;
   }
 }
@@ -34,6 +37,58 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Cat-eye done toggle: an amber oval with a vertical slit pupil when done.
+   Used in components/chat/todo-list.tsx. */
+.cat-eye {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 3px;
+  outline: none;
+  transition:
+    background 0.1s ease,
+    border-color 0.1s ease;
+}
+
+.cat-eye:hover:not(:checked) {
+  border-color: var(--accent);
+}
+
+.cat-eye:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cat-eye:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.cat-eye:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.cat-eye:checked::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  bottom: 2px;
+  transform: translateX(-50%);
+  width: 4px;
+  background: var(--foreground);
+  border-radius: 2px;
+  opacity: 0.75;
 }
 
 /* Lissie's chat. CopilotKit's v2 components read shadcn tokens set on
@@ -73,5 +128,5 @@ body {
   --input: var(--chat-line);
   --ring: var(--chat-focus);
   --radius: 0.5rem;
-  --cpk-default-font-family: var(--font-geist-sans);
+  --cpk-default-font-family: var(--font-space-grotesk);
 }

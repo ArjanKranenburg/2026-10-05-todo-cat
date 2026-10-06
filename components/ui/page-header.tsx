@@ -9,7 +9,7 @@ export function PageHeader({
 }) {
   return (
     <header className="flex flex-col gap-3">
-      <h1 className="text-4xl leading-tight font-semibold tracking-tight text-balance">
+      <h1 className="font-display text-4xl leading-tight font-semibold tracking-tight text-balance">
         {title}
       </h1>
       {children && <p className="text-lg leading-7 text-muted">{children}</p>}
