@@ -10,6 +10,10 @@ import {
   createCopilotRuntimeHandler,
   InMemoryAgentRunner,
 } from "@copilotkit/runtime/v2";
+import {
+  MASTRA_RESOURCE_ID_KEY,
+  RequestContext,
+} from "@mastra/core/request-context";
 import { defer, from, mergeAll, type Observable } from "rxjs";
 import { loadLissieHistory } from "./lissie-history";
 import { ownsLissieThread } from "./lissie-threads";
@@ -138,14 +142,21 @@ async function history(threadId: string): Promise<Observable<BaseEvent>> {
 const runner = new LissieRunner();
 
 const runtime = new CopilotRuntime({
-  // Per request, so Lissie's memory resource is the signed-in user.
-  agents: async ({ request }) => ({
-    [LISSIE_AGENT_ID]: MastraAgent.getLocalAgent({
-      mastra,
-      agentId: LISSIE_AGENT_ID,
-      resourceId: await requireUserId(request),
-    }),
-  }),
+  // Per request, so Lissie's memory resource and the owner her tools act for
+  // (lib/lissie-tools.ts) are the signed-in user. The bridge files the
+  // client's AG-UI `context` under its own `ag-ui` key and copies nothing else
+  // from the request into this context.
+  agents: async ({ request }) => {
+    const userId = await requireUserId(request);
+    return {
+      [LISSIE_AGENT_ID]: MastraAgent.getLocalAgent({
+        mastra,
+        agentId: LISSIE_AGENT_ID,
+        resourceId: userId,
+        requestContext: new RequestContext([[MASTRA_RESOURCE_ID_KEY, userId]]),
+      }),
+    };
+  },
   runner,
   // By default the runtime copies the request's `authorization` and `x-*`
   // headers onto the agent, and the Mastra bridge sends them with every model

@@ -1,4 +1,5 @@
 import { createClient } from "@libsql/client";
+import type { StorageDomains } from "@mastra/core/storage";
 import { expect, type Page, test } from "@playwright/test";
 import { mastraStorage } from "../lib/mastra-storage";
 
@@ -16,10 +17,17 @@ async function signUp(page: Page): Promise<string> {
 }
 
 /**
- * Writes a conversation long enough to overflow the viewport into the thread
- * the user's first visit to / started in Lissie's memory.
+ * Runs `write` on Lissie's memory store in the e2e database, for the one
+ * thread the user's first visit to / started.
  */
-async function seedLongConversation(email: string) {
+async function withMemory(
+  email: string,
+  write: (thread: {
+    memory: NonNullable<StorageDomains["memory"]>;
+    resourceId: string;
+    threadId: string;
+  }) => Promise<void>,
+) {
   // The e2e server writes to the same file; wait for its locks (lib/db.ts).
   const client = createClient({
     url: process.env.E2E_DATABASE_URL ?? "",
@@ -37,7 +45,15 @@ async function seedLongConversation(email: string) {
     if (!memory) throw new Error("Mastra has no memory store");
     const { threads } = await memory.listThreads({ filter: { resourceId } });
     expect(threads).toHaveLength(1);
-    const threadId = threads[0].id;
+    await write({ memory, resourceId, threadId: threads[0].id });
+  } finally {
+    client.close();
+  }
+}
+
+/** Writes a conversation long enough to overflow the viewport. */
+async function seedLongConversation(email: string) {
+  await withMemory(email, async ({ memory, resourceId, threadId }) => {
     const start = Date.now();
     await memory.saveMessages({
       messages: Array.from({ length: 30 }, (_, i) => {
@@ -52,9 +68,90 @@ async function seedLongConversation(email: string) {
         };
       }),
     });
-  } finally {
-    client.close();
-  }
+  });
+}
+
+/**
+ * Writes one of Lissie's turns with three tool calls (one failed) into the
+ * thread the user's first visit to / started, as Mastra stores it.
+ */
+async function seedToolCalls(email: string) {
+  await withMemory(email, async ({ memory, resourceId, threadId }) => {
+    const todo = {
+      id: "todo-1",
+      title: "buy milk",
+      dueDate: null,
+      done: false,
+      createdAt: new Date().toISOString(),
+      completedAt: null,
+    };
+    const call = (
+      toolCallId: string,
+      toolName: string,
+      args: unknown,
+      result: unknown,
+    ) => ({
+      type: "tool-invocation" as const,
+      toolInvocation: {
+        state: "result" as const,
+        toolCallId,
+        toolName,
+        args,
+        result,
+      },
+    });
+    const start = Date.now();
+    await memory.saveMessages({
+      messages: [
+        {
+          id: `${threadId}-ask`,
+          threadId,
+          resourceId,
+          role: "user",
+          createdAt: new Date(start),
+          content: {
+            format: 2,
+            parts: [{ type: "text", text: "Add milk, and finish nope." }],
+          },
+        },
+        {
+          id: `${threadId}-answer`,
+          threadId,
+          resourceId,
+          role: "assistant",
+          createdAt: new Date(start + 1000),
+          content: {
+            format: 2,
+            parts: [
+              call(
+                "call-1",
+                "listTodos",
+                {},
+                {
+                  todos: [{ ...todo, id: "todo-0", done: true }],
+                },
+              ),
+              { type: "step-start" },
+              call("call-2", "addTodo", { title: "buy milk" }, todo),
+              call(
+                "call-3",
+                "setTodoDone",
+                { id: "nope", done: true },
+                {
+                  error: {
+                    code: "todo-not-found",
+                    message: "There is no to-do with id nope.",
+                  },
+                },
+              ),
+              { type: "step-start" },
+              { type: "text", text: "Milk. Noted." },
+            ],
+          },
+        },
+      ],
+    });
+  });
 }
 
 test("the home page shows the chat and connects to the user's thread", async ({
@@ -137,6 +234,52 @@ test("New conversation starts an empty chat that stays current after a reload", 
   ).toBeVisible();
   await expect(page.getByText("Message 29:")).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test("the sidebar shows the user's open and done to-dos, read-only", async ({
+  page,
+}) => {
+  await signUp(page);
+  const sidebar = page.getByRole("complementary", { name: "Your to-dos" });
+  await expect(sidebar.getByText("Nothing open. Suspicious.")).toBeVisible();
+
+  // The REST API with the browser's session cookie; the page itself has no
+  // way to change the list.
+  for (const title of ["buy milk", "feed the cat"]) {
+    const added = await page.request.post("/api/todos", { data: { title } });
+    expect(added.status()).toBe(201);
+    if (title === "feed the cat") {
+      const { id } = await added.json();
+      await page.request.patch(`/api/todos/${id}`, { data: { done: true } });
+    }
+  }
+  await page.reload();
+
+  const open = sidebar.getByRole("region", { name: /Open/ });
+  const done = sidebar.getByRole("region", { name: /Done/ });
+  await expect(open.getByRole("listitem")).toHaveText(["buy milk"]);
+  await expect(done.getByRole("listitem")).toHaveText(["feed the cat"]);
+  await expect(sidebar.getByRole("button")).toHaveCount(0);
+  await expect(sidebar.getByRole("checkbox")).toHaveCount(0);
+});
+
+test("Lissie's tool calls replay as one readable line each", async ({
+  page,
+}) => {
+  const email = await signUp(page);
+  await seedToolCalls(email);
+  await page.reload();
+
+  const conversation = page.getByTestId("copilot-message-list");
+  await expect(conversation.getByTestId("lissie-tool-call")).toHaveText([
+    "✓Looked through your list: 0 open, 1 done",
+    "✓Added “buy milk”",
+    "✕Could not change that to-do: There is no to-do with id nope.",
+  ]);
+  await expect(conversation.getByText("Milk. Noted.")).toBeVisible();
+  // No raw tool arguments or results anywhere in the chat.
+  await expect(conversation.getByText("toolCallId")).toHaveCount(0);
+  await expect(conversation.getByText('"title"')).toHaveCount(0);
 });
 
 test("the chat runtime turns away requests without a session", async ({

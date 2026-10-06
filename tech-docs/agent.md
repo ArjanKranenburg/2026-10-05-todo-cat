@@ -8,7 +8,8 @@ Lissie is a Mastra agent that the chat on `/` reaches through CopilotKit over AG
                                                           │ MastraAgent.getLocalAgent (@ag-ui/mastra)
                                                           ▼
                        lib/mastra.ts ── lib/lissie.ts (agent, memory) ── lib/lissie-model.ts ──▶ OpenRouter
-                            │
+                            │                  │
+                            │                  └─ lib/lissie-tools.ts ──▶ lib/todo-service.ts
                             └─ memory tables in our SQLite file, on lib/db.ts's connection
 ```
 
@@ -20,8 +21,16 @@ Lissie is a Mastra agent that the chat on `/` reaches through CopilotKit over AG
 
 ## The agent
 
-- `lib/lissie.ts` holds the instructions (cat persona, declines everything that is not about the to-do list, may not pretend to change the list), and the agent.
-- She has no tools yet. When tools arrive, they call the todo service with the user id from the server session (see [architecture.md](architecture.md)), never from a tool argument, and the instructions' "what you cannot do yet" section goes.
+- `lib/lissie.ts` holds the instructions (cat persona, declines everything that is not about the to-do list, comments in character on every to-do she adds or marks done, has opinions about "feed the cat") and the agent.
+- The model needs today's date to turn "tomorrow" into a due date, and does not get it yet.
+
+## Tools
+
+- `listTodos`, `addTodo` and `setTodoDone` (`lib/lissie-tools.ts`) are an adapter on the todo service (see [architecture.md](architecture.md)); she cannot rename, reschedule or delete yet.
+- `lib/lissie-tool-calls.ts` holds what the model and the chat share and has no server code: the tool names, their input schemas (the contract's, plus `SetTodoDoneInput`), and `describeToolCall`, the one line the chat shows per call.
+- **The owner comes from the server session only.** The runtime's agents factory resolves the user per request and passes `requestContext: new RequestContext([[MASTRA_RESOURCE_ID_KEY, userId]])` to `getLocalAgent`; each tool reads that key and throws without it. `MASTRA_RESOURCE_ID_KEY` is Mastra's own key for the authenticated resource, which also wins over `memory.resource`.
+- Nothing from the client reaches that context: the bridge files the AG-UI `context` under its own `ag-ui` key and ignores `forwardedProps` and `state` for it; the input schemas are strict, so a `userId` argument from the model fails validation.
+- Mastra parses the input with the schema before `execute` and answers invalid input with a `{ error: true, message }` result. Tools return `TodoError`s as `{ error: { code, message } }` instead of throwing, because the bridge drops a thrown tool error and the chat would show the call as running forever.
 - The model is `openrouter/${OPENROUTER_MODEL}` (default `z-ai/glm-5.3-flash`) through Mastra's model router, which reads `OPENROUTER_API_KEY` itself. `lib/lissie-model.ts` holds only that string, so tests can mock the module.
 - Check a model id with `node .claude/skills/mastra/scripts/provider-registry.mjs --provider openrouter`.
 
@@ -53,11 +62,13 @@ Lissie is a Mastra agent that the chat on `/` reaches through CopilotKit over AG
 
 - `LissieRunner` extends the in-memory runner. A run streams as usual; `connect` without a run in flight answers `RUN_STARTED`, a `MESSAGES_SNAPSHOT` from Mastra memory (`lib/lissie-history.ts`) and `RUN_FINISHED`, so a reload or a server restart shows the whole conversation. With a run in flight it joins the live stream.
 - Snapshot messages keep their Mastra ids; the Mastra bridge drops incoming messages whose ids it has stored, so history the client sends back is not saved twice. The provider's `messageFilter` sends only the newest message anyway.
-- History restores user and assistant text only. Tool calls are not restored yet; add them when Lissie gets tools.
+- History restores user text, assistant text and tool calls with their results. Mastra stores one assistant message per turn with text and `tool-invocation` parts interleaved; `toChatMessages` splits it into one AG-UI assistant message per run of text and its tool calls (the first keeps the stored id, the others get `-1`, `-2`, ...), each followed by its results as `tool` messages, which is how the live stream shows them. A call without a result is dropped.
 
 ## The chat UI
 
 - `components/chat/lissie-chat.tsx` is the client component: `CopilotKitProvider` (runtime URL, agent `lissie`) and `CopilotChat` with the server-computed `threadId`.
+- `components/chat/lissie-tool-calls.tsx` registers a `useRenderTool` renderer per tool that draws `describeToolCall`'s line (running, done or failed), live and in replayed history. Text inside the chat must use the `--chat-*` aliases: CopilotKit redefines `--muted` there, which makes `text-muted` nearly invisible.
+- The to-do sidebar (`components/chat/todo-sidebar.tsx`) is server-rendered from `listTodos` and read-only. `LissieToolCalls` subscribes to the agent's events and calls `router.refresh()` when a result of `addTodo` or `setTodoDone` arrives; a replay arrives as a snapshot and refreshes nothing.
 - `app/page.tsx` keys `LissieChat` by thread id, so a new conversation (the server action calls `refresh()`) mounts a fresh provider and chat instead of carrying the old messages over.
 - The CopilotKit Inspector is on; CopilotKit itself shows it only in development builds on localhost. `COPILOTKIT_INSPECTOR_DISABLED=true` hides it; `app/page.tsx` reads it on the server per request, so a dev server restart (or `.env` reload) applies it without a rebuild. It needs no runtime route beyond the thread reads above; the runtime's `cpk-debug-events` feed, which streams every user's events, stays denied.
 - An explicit `threadId` makes CopilotKit connect and replay on mount and disables its welcome screen.
@@ -67,9 +78,10 @@ Lissie is a Mastra agent that the chat on `/` reaches through CopilotKit over AG
 
 ## Testing
 
-- `route.test.ts` replaces `lib/lissie-model.ts` with `MockLanguageModelV4` from `ai/test` (`ai` is a dev dependency only for this); its gate holds a run open for the in-flight tests.
-- `e2e/chat.spec.ts` (in QA) checks that `/` shows the chat and connects, that a long conversation (seeded through Mastra's memory store into the e2e database) scrolls inside the chat while the page does not, and that "New conversation" empties the chat for good, all without calling the model.
-- `e2e/lissie.model.spec.ts` talks to the real model and runs only with `npm run test:e2e:model`, never in QA or CI; it needs `OPENROUTER_API_KEY` in `.env`.
+- `route.test.ts` replaces `lib/lissie-model.ts` with `MockLanguageModelV4` from `ai/test` (`ai` is a dev dependency only for this); its gate holds a run open for the in-flight tests, and `model.toolCalls` scripts tool calls, one batch per model call, before the reply. Its tool tests check that the owner ignores the request's `context`, `forwardedProps` and `state`, that the model cannot pass one, and that tool calls replay after a restart.
+- `lib/lissie-tools.test.ts` runs the tool executors on a temp database with two users; `lib/lissie-tool-calls.test.ts` covers the chat's lines.
+- `e2e/chat.spec.ts` (in QA) checks that `/` shows the chat and connects, that a long conversation (seeded through Mastra's memory store into the e2e database) scrolls inside the chat while the page does not, that "New conversation" empties the chat for good, that the sidebar shows open and done to-dos without controls, and that seeded tool calls replay as one line each, all without calling the model.
+- `e2e/lissie.model.spec.ts` talks to the real model and runs only with `npm run test:e2e:model`, never in QA or CI; it needs `OPENROUTER_API_KEY` in `.env`. It asks Lissie to add "buy milk" and finds it in the sidebar without a reload.
 
 ## Gotchas
 

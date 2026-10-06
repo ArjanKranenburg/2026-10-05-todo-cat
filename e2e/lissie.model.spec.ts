@@ -47,3 +47,36 @@ test("Lissie answers, remembers the conversation, and keeps it to its owner", as
   ).toBeVisible();
   await expect(page.getByText(question)).toHaveCount(0);
 });
+
+test("Lissie adds a to-do with her tool, and the sidebar shows it at once", async ({
+  page,
+}) => {
+  await signUp(page, "Milkman");
+  const sidebar = page.getByRole("complementary", { name: "Your to-dos" });
+  const open = sidebar.getByRole("region", { name: /Open/ });
+  await expect(open.getByRole("listitem")).toHaveCount(0);
+
+  const ran = page.waitForResponse((response) =>
+    response.url().endsWith("/api/copilotkit/agent/lissie/run"),
+  );
+  await page
+    .getByPlaceholder("Tell Lissie what needs doing…")
+    .fill('Please add "buy milk" to my list.');
+  await page.getByTestId("copilot-send-button").click();
+  await (await ran).finished();
+
+  // No reload: the finished tool call refreshed the sidebar.
+  await expect(open.getByRole("listitem")).toHaveText(["buy milk"]);
+  const line = page
+    .getByTestId("lissie-tool-call")
+    .filter({ hasText: "Added “buy milk”" });
+  await expect(line).toHaveCount(1);
+  // She comments on what she added.
+  const answer = page.getByTestId("copilot-assistant-message").last();
+  await expect(answer.getByTestId("copilot-assistant-toolbar")).toBeVisible();
+  expect((await answer.innerText()).trim()).not.toBe("");
+
+  await page.reload();
+  await expect(line).toHaveCount(1);
+  await expect(open.getByRole("listitem")).toHaveText(["buy milk"]);
+});

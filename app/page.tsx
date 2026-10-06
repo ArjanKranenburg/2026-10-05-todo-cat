@@ -3,12 +3,14 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth-actions";
 import { newConversation } from "@/app/chat-actions";
 import { LissieChat } from "@/components/chat/lissie-chat";
+import { TodoSidebar } from "@/components/chat/todo-sidebar";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Shell } from "@/components/ui/shell";
 import { db } from "@/lib/db";
 import { currentLissieThread } from "@/lib/lissie-threads";
 import { getUserId } from "@/lib/session";
+import { listTodos } from "@/lib/todo-service";
 
 // COPILOTKIT_INSPECTOR_DISABLED=true (or 1) hides the CopilotKit Inspector,
 // following the convention of CopilotKit's own COPILOTKIT_TELEMETRY_DISABLED.
@@ -26,7 +28,10 @@ export default async function Home() {
     columns: { name: true },
   });
   if (!user) redirect("/login");
-  const threadId = await currentLissieThread(userId);
+  const [threadId, todos] = await Promise.all([
+    currentLissieThread(userId),
+    listTodos(userId),
+  ]);
 
   return (
     <Shell width="wide">
@@ -47,12 +52,15 @@ export default async function Home() {
           </form>
         </div>
       </div>
-      {/* A new conversation is a fresh chat, not the old one's state reused. */}
-      <LissieChat
-        key={threadId}
-        threadId={threadId}
-        inspector={!inspectorDisabled()}
-      />
+      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row-reverse md:gap-6">
+        <TodoSidebar todos={todos} />
+        {/* A new conversation is a fresh chat, not the old one's state reused. */}
+        <LissieChat
+          key={threadId}
+          threadId={threadId}
+          inspector={!inspectorDisabled()}
+        />
+      </div>
     </Shell>
   );
 }

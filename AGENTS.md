@@ -14,7 +14,7 @@ A to-do list web app kept by Lissie, a cat with attitude (a Mastra agent you cha
 Next.js 16 App Router at the repo root, plus npm workspaces `contract/` (shared zod schemas) and `cli/` (the `todo-cat` CLI, a REST client for agents and humans).
 Persistence is Drizzle ORM on SQLite via `lib/db.ts`; authentication is Better Auth (email and password).
 The todo core exists (the `todos` table, `lib/todo-service.ts`, the zod schemas in `contract/`), and so do its REST adapter (`/api/todos`) and the CLI on top of it (login via the device flow and the `/device` approval page).
-Lissie chats through CopilotKit over AG-UI (`/api/copilotkit`) with Mastra memory in the same SQLite file; her tools and MCP do not exist yet.
+Lissie chats through CopilotKit over AG-UI (`/api/copilotkit`) with Mastra memory in the same SQLite file; her tools list, add and complete the signed-in user's to-dos, next to a read-only sidebar of the list; MCP does not exist yet.
 
 ## Commands
 
@@ -87,7 +87,7 @@ Index:
 - [database.md](tech-docs/database.md) — Drizzle on SQLite: the single `lib/db.ts` connection, the migration workflow, test databases and v1 gotchas.
 - [rest-api.md](tech-docs/rest-api.md) — the `/api/todos` endpoints, their schemas and status codes, the OpenAPI document and its regeneration, and how to get a bearer token with curl.
 - [auth.md](tech-docs/auth.md) — Better Auth: config layout, the `getUserId` helper every adapter uses, server-action forms, schema generation and test setup.
-- [agent.md](tech-docs/agent.md) — Lissie: the Mastra agent, her memory, the CopilotKit runtime as an authorization boundary, history replay, the chat UI and its tests.
+- [agent.md](tech-docs/agent.md) — Lissie: the Mastra agent, her tools and how they get the user id, her memory, the CopilotKit runtime as an authorization boundary, history replay, the chat UI and its tests.
 - [cli.md](tech-docs/cli.md) — the `todo-cat` CLI: commands, agent-friendly output and exit codes, device-flow login, credentials, the build, its end-to-end test, and the `todo-cat-cli` agent skill.
 
 ## Keeping this map current

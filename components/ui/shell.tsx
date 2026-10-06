@@ -3,9 +3,10 @@ import type { ReactNode } from "react";
 const widths = {
   // Forms and short pages, centered in the viewport.
   narrow: "flex-1 max-w-sm justify-center py-16",
-  // The chat: wider, exactly one viewport tall, so the chat scrolls instead of
-  // the page. No flex-1: as a grown flex item it would grow with its content.
-  wide: "h-dvh max-w-2xl py-8",
+  // The chat and its sidebar: wider, exactly one viewport tall, so the chat
+  // scrolls instead of the page. No flex-1: as a grown flex item it would grow
+  // with its content.
+  wide: "h-dvh max-w-5xl py-8",
 };
 
 // The single column every page sits in.
