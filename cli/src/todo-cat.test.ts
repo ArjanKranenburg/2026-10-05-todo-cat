@@ -1,4 +1,5 @@
 import { execFileSync, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -86,7 +87,14 @@ async function startServer(port: number): Promise<void> {
       (response) => response.ok,
       () => false,
     );
-    if (ok) return;
+    if (ok) {
+      // `next dev` compiles a route on its first request; do it here for the
+      // routes the CLI calls, not inside a test's 5-second budget.
+      for (const path of ["/api/todos", `/api/todos/${randomUUID()}`]) {
+        await fetch(`${serverUrl}${path}`);
+      }
+      return;
+    }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error(`next dev did not answer within 2 minutes:\n${output}`);

@@ -50,6 +50,7 @@
 
 - `tsconfig.json` lists the `.next-e2e/` and `.next-e2e-cli/` type globs on purpose; without them Next rewrites `tsconfig.json` on every e2e run.
 - The CLI's end-to-end test (`cli/src/todo-cat.test.ts`, see [cli.md](cli.md)) starts its own `next dev` in `.next-e2e-cli/`, so it is the slowest Vitest file, and it needs no running server.
+- `next dev` compiles each route on its first request, which can exceed a test's 5-second budget on a busy CI runner, so that test requests the routes the CLI calls once before the tests start.
 - Some agent shells export `FORCE_COLOR`, and next to `NO_COLOR` it makes Node warn on stderr; `qa.sh` unsets it, and the CLI test drops it for the CLI, whose `--json` stderr it parses.
 - Vitest skips `.claude/` and `.agents/` (a symlink to it), because agent worktrees there are full checkouts whose tests are not this checkout's.
 - After an e2e run, the gitignored `next-env.d.ts` points at `.next-e2e/` types until the next `npm run dev` or `npm run build` points it back; this is harmless.
