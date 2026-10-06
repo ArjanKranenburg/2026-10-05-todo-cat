@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth-actions";
 import { newConversation } from "@/app/chat-actions";
 import { LissieChat } from "@/components/chat/lissie-chat";
-import { TodoSidebar } from "@/components/chat/todo-sidebar";
+import { TodoList } from "@/components/chat/todo-list";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Shell } from "@/components/ui/shell";
@@ -53,7 +53,7 @@ export default async function Home() {
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row-reverse md:gap-6">
-        <TodoSidebar todos={todos} />
+        <TodoList todos={todos} />
         {/* A new conversation is a fresh chat, not the old one's state reused. */}
         <LissieChat
           key={threadId}

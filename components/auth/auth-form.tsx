@@ -65,10 +65,12 @@ export function AuthForm({
           minLength={8}
           required
         />
-        <FormError message={state.error} />
-        <Button type="submit" disabled={pending}>
-          {pending ? copy.pending : copy.submit}
-        </Button>
+        <div className="flex flex-col gap-3">
+          <FormError message={state.error} />
+          <Button type="submit" disabled={pending}>
+            {pending ? copy.pending : copy.submit}
+          </Button>
+        </div>
       </Form>
       <p className="text-muted">
         {copy.switchPrompt}{" "}
