@@ -73,6 +73,7 @@ around it. Hexagonal (ports and adapters), without the ceremony.
   401 `unauthorized` without either, 404 `todo-not-found`, 400 `validation-failed`;
   see [rest-api.md](rest-api.md).
 - **CLI** (`cli/`): a client of the REST API, never of the database; see [cli.md](cli.md).
+- **Chat** (`/api/copilotkit`): Lissie over CopilotKit and AG-UI; she cannot reach the todo service until her tools land; see [agent.md](agent.md).
 - **Agent tools** (later): call the service directly. The user id comes from the
   server session, never from a tool argument the model fills in.
 - **MCP**: over stdio inside the CLI (a REST client again), over HTTP inside the app

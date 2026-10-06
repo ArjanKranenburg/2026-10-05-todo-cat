@@ -31,7 +31,21 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      // Specs that call Lissie's real model run only in the "model" project.
+      testIgnore: "**/*.model.spec.ts",
+    },
+    {
+      // `npm run test:e2e:model`: needs OPENROUTER_API_KEY, stays out of QA and CI.
+      name: "model",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: "**/*.model.spec.ts",
+      timeout: 180_000,
+    },
+  ],
   webServer: {
     // Migrates the fresh e2e database first; DATABASE_URL comes from `env` below.
     command: `npm run --silent db:migrate && npx next dev --port ${process.env.E2E_PORT}`,

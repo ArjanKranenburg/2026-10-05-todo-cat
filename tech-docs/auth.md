@@ -11,7 +11,7 @@
 ## One way to ask who is signed in
 
 - `getUserId(headers)` in `lib/session.ts` returns the signed-in user's id from the session cookie or the bearer token, or null.
-- Pages, server actions, and every later adapter (REST, agent tools, MCP) call it; nothing else calls `auth.api.getSession` or reads session cookies.
+- Pages, server actions, the chat runtime and every later adapter (REST, agent tools, MCP) call it; nothing else calls `auth.api.getSession` or reads session cookies.
 - It returns only the id; load other user fields from the `user` table (as `app/page.tsx` does for the name).
 - Each page checks on the server (`/` redirects to `/login`, `/login` and `/signup` redirect to `/` when signed in); there is no `proxy.ts`, because a cookie-only proxy check is not a security boundary.
 

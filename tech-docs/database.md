@@ -6,19 +6,20 @@
 - `lib/db.ts` is the only module that opens the database; it imports `server-only`, so a Client Component importing it fails the build.
 - `lib/schema.ts` defines or re-exports every table and is what drizzle-kit diffs; Better Auth's tables are generated into `lib/auth-schema.ts` (see [auth.md](auth.md)).
 - `drizzle.config.ts` drives drizzle-kit; generated migrations land in `drizzle/` and are committed.
+- Mastra's memory tables (`mastra_*`) live in the same file on the same connection, but Mastra owns their schema, not Drizzle; see [agent.md](agent.md).
 
 ## Workflow
 
 - Change `lib/schema.ts`, run `npm run db:generate` (`-- --name <what>` names the folder), review the SQL it writes to `drizzle/`, then `npm run db:migrate`; run `npm run format` too, since drizzle-kit writes `snapshot.json` in a format Biome rejects.
 - `npm run db:reset` deletes the local database file and its journal files (`scripts/db-reset.mts`) and migrates a fresh one; it refuses non-`file:` URLs.
 - `npm run db:seed` (`scripts/db-seed.mts`) deletes and re-creates the demo user through Better Auth, then seeds its to-dos through the todo service; timestamps are anchored to today's local midnight, so runs on the same day write the same rows.
-- Do not use `drizzle-kit push`: every database (local, Vitest, e2e, CI) is built from the same reviewed migration files.
+- Do not use `drizzle-kit push`: every database (local, Vitest, e2e, CI) is built from the same reviewed migration files, and push would also drop Mastra's tables, which `lib/schema.ts` does not know.
 
 ## Design decisions
 
 - Drizzle is on the v1 release candidate (`drizzle-orm@rc`, `drizzle-kit@rc`) because the Drizzle docs and their install commands target v1; the stable 0.x API and migration folder layout differ. Move to `latest` once 1.0 ships.
 - Both Drizzle packages are pinned exactly, because a caret range on a prerelease also matches Drizzle's branch snapshot builds (such as `1.0.0-rc.5-ab785fc`), which `npm update` would install.
-- Migrations run through `drizzle-kit migrate` only, never at app startup, so there is one migration path for every environment.
+- Migrations run through `npm run db:migrate` only (`drizzle-kit migrate`, then `scripts/mastra-migrate.mts` for Mastra's tables), never at app startup, so there is one migration path for every environment.
 - `drizzle.config.ts` and `scripts/db-reset.mts` load `.env` with `@next/env`, the loader Next.js uses, so they see the same values as the app; a variable already set in the environment wins, which is how tests and e2e point them at temp files.
 - `@libsql/client` is on Next.js's built-in `serverExternalPackages` list, so `next.config.ts` needs no entry for it.
 

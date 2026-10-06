@@ -10,7 +10,8 @@
 ## Commands
 
 - `npm test` runs Vitest once; `npm run test:watch` keeps it watching.
-- `npm run test:e2e` runs Playwright, which starts and stops its own dev server.
+- `npm run test:e2e` runs Playwright's `chromium` project, which starts and stops its own dev server.
+- `npm run test:e2e:model` runs the `model` project: specs named `*.model.spec.ts` that call Lissie's real model through OpenRouter. It is not part of QA or CI, since it needs a real key and costs money.
 - `npx playwright install chromium` fetches the browser on a fresh machine.
 - `npm run typecheck` runs `next typegen` and then `tsc --noEmit`; the root `tsconfig.json` globs cover both workspaces, so they need no tsconfig of their own yet.
 - `npm run qa` (`scripts/qa.sh`) runs Biome, typecheck, production build, CLI build, Vitest and Playwright in that order.
